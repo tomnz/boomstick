@@ -22,13 +22,16 @@ public:
     
 private:
     unsigned long lastSampleMillis;
-    uint8_t samples;
-    uint8_t currSampleSlot;
     bool allSlotsUsed;
-    int* minSamples;
-    int* maxSamples;
-    int currMax;
-    int currMin;
+    uint8_t
+        samples,
+        currSampleSlot;
+    int
+        *minSamples,
+        *maxSamples;
+    int
+        currMax,
+        currMin;
 };
 
 // Helper functions

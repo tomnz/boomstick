@@ -24,38 +24,33 @@
 //#define ENABLE_ACCEL
 #define ACCEL_SAMPLES 60  // Seconds of min/max values to track
 
+// Globals
 byte
     peak        = 0,            // Used for falling dot
     dotCount    = 0,            // Frame counter for delaying dot-falling speed
     volCount    = 0;            // Frame counter for storing past volume data
 int
-    vol[SAMPLES],             // Collection of prior volume samples
-    lvl         = 10,            // Current "dampened" audio level
-    minLvlAvg   = 0,            // For dynamic adjustment of graph low & high
-    maxLvlAvg   = 512;
+    lvl         = 10;           // Current "dampened" audio level
+double
+    volume      = 0.0;
 Adafruit_NeoPixel
     strip = Adafruit_NeoPixel(N_PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
+
 #ifdef ENABLE_MIC
 TimeSampler micSamples = TimeSampler(MIC_SAMPLES);
 #endif
+
 #ifdef ENABLE_ACCEL
 TimeSampler accelSamples = TimeSampler(ACCEL_SAMPLES);
 #endif
 
 void setup() {
-#ifdef ENABLE_MIC
-
     // This is only needed on 5V Arduinos (Uno, Leonardo, etc.).
     // Connect 3.3V to mic AND TO AREF ON ARDUINO and enable this
     // line.    Audio samples are 'cleaner' at 3.3V.
 #ifdef MIC_VOLT_REF
     analogReference(EXTERNAL);
 #endif
-
-    // Reset historical volume samples
-    memset(vol, 0, sizeof(vol));
-    
-#endif    
     
     strip.begin();
 }
@@ -66,6 +61,7 @@ void loop() {
     DoMic();
 #endif
 #ifdef ENABLE_ACCEL
+    DoAccel();
 #endif
 }
 
@@ -79,7 +75,8 @@ void DoMic() {
     int minLvl = micSamples.Min(), maxLvl = micSamples.Max();
     
     // Calculate bar height based on dynamic min/max levels (fixed point):
-    int height = TOP * (lvl - minLvl) / (long)(maxLvl - minLvl);
+    volume = ((double)lvl - (double)minLvl) / ((double)maxLvl - (double)minLvl);
+    int height = (int)((double)TOP * volume);
 
     // Clip output
     if (height < 0)
@@ -111,6 +108,9 @@ void DoMic() {
         if(peak > 0) peak--;
         dotCount = 0;
     }
+}
+
+void DoAccel() {
 }
 
 void ReadMicLevel() {
