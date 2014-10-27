@@ -4,6 +4,8 @@
 
 TimeSampler::TimeSampler(uint8_t secs) : currSampleSlot(0), allSlotsUsed(false), samples(secs) {
     lastSampleMillis = millis();
+    
+    // Initialize the sample arrays
     int tempMinSamples[samples];
     minSamples = tempMinSamples;
     int tempMaxSamples[samples];
