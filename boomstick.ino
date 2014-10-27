@@ -1,24 +1,28 @@
 #include <Adafruit_NeoPixel.h>
-#include "color.h"
+#include "Color.h"
+#include "TimeSampler.h"
 
 // LED hardware settings
 #define LED_PIN     6     // NeoPixel LED strand is connected to this pin
 #define N_PIXELS    16    // Number of pixels in strand
 
 // Mic hardware settings
-#define MIC_PIN     A9    // Microphone is attached to this analog pin
+//#define MIC_PIN     A9    // Microphone is attached to this analog pin
+#define MIC_PIN     1
 #define DC_OFFSET   0     // DC offset in mic signal - if unusure, leave 0
 #define NOISE       10    // Noise/hum/interference in mic signal
 #define SAMPLES     60    // Length of buffer for dynamic level adjustment
-//#define MIC_VOLT_REF    // Uncomment to have Arduino use the external analog reference volatage
+//#define MIC_VOLT_REF    // Uncomment to have Arduino use the external analog reference voltage
 
 // Mic animation settings
 #define ENABLE_MIC
+#define MIC_SAMPLES 60    // Seconds of min/max mic values to track
 #define TOP         (N_PIXELS + 2) // Allow dot to go slightly off scale
 #define PEAK_FALL   40    // Rate of peak falling dot
 
 // Accelerometer animation settings
 //#define ENABLE_ACCEL
+#define ACCEL_SAMPLES 60  // Seconds of min/max values to track
 
 byte
     peak        = 0,            // Used for falling dot
@@ -31,7 +35,12 @@ int
     maxLvlAvg   = 512;
 Adafruit_NeoPixel
     strip = Adafruit_NeoPixel(N_PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
-
+#ifdef ENABLE_MIC
+TimeSampler micSamples = TimeSampler(MIC_SAMPLES);
+#endif
+#ifdef ENABLE_ACCEL
+TimeSampler accelSamples = TimeSampler(ACCEL_SAMPLES);
+#endif
 
 void setup() {
 #ifdef ENABLE_MIC
@@ -63,21 +72,23 @@ void loop() {
 void DoMic() {
     uint8_t i;
 
-    // Read raw mic level (also updates lvl)
-    int n = ReadMicLevel();
+    // Read raw mic level
+    ReadMicLevel();
+    micSamples.Sample(lvl);
+    
+    int minLvl = micSamples.Min(), maxLvl = micSamples.Max();
     
     // Calculate bar height based on dynamic min/max levels (fixed point):
-    int height = TOP * (lvl - minLvlAvg) / (long)(maxLvlAvg - minLvlAvg);
+    int height = TOP * (lvl - minLvl) / (long)(maxLvl - minLvl);
 
     // Clip output
-    if (height < 0L)
+    if (height < 0)
         height = 0;
-    else if (height > TOP)
-        height = TOP;
+    else if (height > 1)
+        height = 1;
     
     // Keep 'peak' dot at top
     if(height > peak) peak = height;
-
 
     // Color pixels based on rainbow gradient
     for (i=0; i<N_PIXELS; i++) {
@@ -100,38 +111,9 @@ void DoMic() {
         if(peak > 0) peak--;
         dotCount = 0;
     }
-
-    // Save sample for dynamic leveling
-    vol[volCount] = n;
-    // Advance/rollover sample counter
-    if(++volCount >= SAMPLES) volCount = 0;
-
-    // Get volume range of prior frames
-    uint16_t minLvl, maxLvl;
-    minLvl = maxLvl = vol[0];
-    for(i=1; i<SAMPLES; i++) {
-        if (vol[i] < minLvl)
-            minLvl = vol[i];
-        else if (vol[i] > maxLvl)
-            maxLvl = vol[i];
-    }
-    
-    // minLvl and maxLvl indicate the volume range over prior frames, used
-    // for vertically scaling the output graph (so it looks interesting
-    // regardless of volume level).    If they're too close together though
-    // (e.g. at very low volume levels) the graph becomes super coarse
-    // and 'jumpy'...so keep some minimum distance between them (this
-    // also lets the graph go to zero when no sound is playing):
-    if((maxLvl - minLvl) < TOP)
-        maxLvl = minLvl + TOP;
-    
-    // Dampen min/max levels
-    // (fake rolling average)
-    minLvlAvg = (minLvlAvg * 63 + minLvl) >> 6;
-    maxLvlAvg = (maxLvlAvg * 63 + maxLvl) >> 6;
 }
 
-int ReadMicLevel() {
+void ReadMicLevel() {
     // Raw reading from mic 
     int n = analogRead(MIC_PIN);
     // Center on zero
@@ -141,8 +123,6 @@ int ReadMicLevel() {
 
     // "Dampened" reading (else looks twitchy)
     lvl = ((lvl * 7) + n) >> 3;
-    
-    return n;
 }
 
 // Input a value 0 to 255 to get a color value.
