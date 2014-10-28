@@ -17,7 +17,8 @@
 #define HISTORIC_SMOOTH_FACTOR 500.0
 #define HISTORIC_SCALE 1.5
 #define SMOOTH_FACTOR 5.0
-#define MIN_COL     50
+#define BAR_SCALE   1.5
+#define MIN_COL     60
 #define MAX_COL     255
 #define COL_RANGE   (MAX_COL - MIN_COL)
 #define COL_VAR     40
@@ -189,7 +190,7 @@ void loop() {
   // Second fixed-point scale based on dynamic min/max levels:
   lastLevel = (lastLevel * SMOOTH_FACTOR + (double)currLevel) / (SMOOTH_FACTOR + 1.0);
   
-  level = (int)((TOP * lastLevel - TOP * (double)(minLvlAvg[x])) /
+  level = (int)((TOP * BAR_SCALE * lastLevel - TOP * (double)(minLvlAvg[x])) /
     ((double)(maxLvlAvg[x]) - (double)(minLvlAvg[x])));
 
   // Clip output and convert to byte:
@@ -224,6 +225,7 @@ void loop() {
   if (peak[x] > 0 && peak[x] <= N_PIXELS-1)
     strip.setPixelColor(peak[x], Wheel(volumeEffect + map(i, 0, strip.numPixels() - 1, 0, COL_VAR) + MIN_COL));
 
+  strip.setBrightness(level * 255 / TOP);
   strip.show();
 
   // Every third frame, make the peak pixels drop by 1:
