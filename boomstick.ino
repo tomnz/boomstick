@@ -16,6 +16,7 @@
 #define FFT_SLOT    1     // Which FFT index (0-7) to pull level data from
 #define HISTORIC_SMOOTH_FACTOR 500.0
 #define HISTORIC_SCALE 1.5
+#define SMOOTH_FACTOR 5.0
 #define MIN_COL     50
 #define MAX_COL     255
 #define COL_RANGE   (MAX_COL - MIN_COL)
@@ -45,7 +46,7 @@ int
   maxLvlAvg[8], // pseudo rolling averages for the prior few frames.
   colDiv[8];    // Used when filtering FFT output to 8 columns
 
-int lastLevel = 0;
+double lastLevel = 0;
 
 double historicVolume;
 boolean haveHistoricVolume = false;
@@ -186,10 +187,10 @@ void loop() {
   maxLvlAvg[x] = (maxLvlAvg[x] * 7 + maxLvl) >> 3; // (fake rolling average)
 
   // Second fixed-point scale based on dynamic min/max levels:
-  lastLevel = (lastLevel * 7 + currLevel) >> 3;
+  lastLevel = (lastLevel * SMOOTH_FACTOR + (double)currLevel) / (SMOOTH_FACTOR + 1.0);
   
-  level = TOP * (currLevel - minLvlAvg[x]) /
-    (long)(maxLvlAvg[x] - minLvlAvg[x]);
+  level = (int)((TOP * lastLevel - TOP * (double)(minLvlAvg[x])) /
+    ((double)(maxLvlAvg[x]) - (double)(minLvlAvg[x])));
 
   // Clip output and convert to byte:
   if(level < 0L)      c = 0;
