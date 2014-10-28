@@ -16,6 +16,7 @@ void TimeSampler::Sample(int val) {
     // See if we should add another sample
     unsigned long currMillis = millis();
     if (currMillis - lastSampleMillis >= MILLIS_PER_SECOND) {
+        lastSampleMillis = currMillis;
         currSampleSlot++;
         if (currSampleSlot >= samples) {
             currSampleSlot = 0;
@@ -53,7 +54,7 @@ int TimeSampler::Min() {
     
     int minVal = currMin;
     for (int i = 0; i < slots; i++) {
-        if (minSamples[i] > minVal) {
+        if (minSamples[i] < minVal) {
             minVal = minSamples[i];
         }
     }
