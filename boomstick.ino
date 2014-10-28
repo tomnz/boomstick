@@ -7,6 +7,20 @@
 #include <Wire.h>
 #include <Adafruit_NeoPixel.h>
 
+// LED hardware settings
+#define LED_PIN     6     // NeoPixel LED strand is connected to this pin
+#define N_PIXELS    60    // Number of pixels in strand
+#define TOP         (N_PIXELS + 2) // Allow dot to go slightly off scale
+
+// Animation settings
+#define FFT_SLOT    1     // Which FFT index (0-7) to pull level data from
+#define HISTORIC_SMOOTH_FACTOR 500.0
+#define HISTORIC_SCALE 1.5
+#define MIN_COL     50
+#define MAX_COL     255
+#define COL_RANGE   (MAX_COL - MIN_COL)
+#define COL_VAR     40
+
 // Microphone connects to Analog Pin 0.  Corresponding ADC channel number
 // varies among boards...it's ADC0 on Uno and Mega, ADC7 on Leonardo.
 // Other boards may require different settings; refer to datasheet.
@@ -30,6 +44,11 @@ int
   minLvlAvg[8], // For dynamic adjustment of low & high ends of graph,
   maxLvlAvg[8], // pseudo rolling averages for the prior few frames.
   colDiv[8];    // Used when filtering FFT output to 8 columns
+
+int lastLevel = 0;
+
+double historicVolume;
+boolean haveHistoricVolume = false;
 
 /*
 These tables were arrived at through testing, modeling and trial and error,
@@ -83,15 +102,14 @@ PROGMEM uint8_t
     col0data, col1data, col2data, col3data,
     col4data, col5data, col6data, col7data };
 
-// LED hardware settings
-#define LED_PIN     6     // NeoPixel LED strand is connected to this pin
-#define N_PIXELS    60    // Number of pixels in strand
-#define TOP         (N_PIXELS + 2) // Allow dot to go slightly off scale
-
 Adafruit_NeoPixel
 	strip = Adafruit_NeoPixel(N_PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
+  
+  const unsigned int BAUD_RATE = 9600;
+  Serial.begin(BAUD_RATE);
+
   uint8_t i, j, nBins, binNum, *data;
 
   memset(peak, 0, sizeof(peak));
@@ -126,7 +144,7 @@ void setup() {
 
 void loop() {
   uint8_t  i, x, L, *data, nBins, binNum, weighting, c;
-  uint16_t minLvl, maxLvl;
+  uint16_t minLvl, maxLvl, currLevel;
   int      level, y, sum;
 
   while(ADCSRA & _BV(ADIE)); // Wait for audio sampling to finish
@@ -145,54 +163,65 @@ void loop() {
   }
 
   // Downsample spectrum output to 8 columns:
-  for(x=0; x<8; x++) {
-    data   = (uint8_t *)pgm_read_word(&colData[x]);
-    nBins  = pgm_read_byte(&data[0]) + 2;
-    binNum = pgm_read_byte(&data[1]);
-    for(sum=0, i=2; i<nBins; i++)
-      sum += spectrum[binNum++] * pgm_read_byte(&data[i]); // Weighted
-    col[x][colCount] = sum / colDiv[x];                    // Average
-    minLvl = maxLvl = col[x][0];
-    for(i=1; i<10; i++) { // Get range of prior 10 frames
-      if(col[x][i] < minLvl)      minLvl = col[x][i];
-      else if(col[x][i] > maxLvl) maxLvl = col[x][i];
-    }
-    // minLvl and maxLvl indicate the extents of the FFT output, used
-    // for vertically scaling the output graph (so it looks interesting
-    // regardless of volume level).  If they're too close together though
-    // (e.g. at very low volume levels) the graph becomes super coarse
-    // and 'jumpy'...so keep some minimum distance between them (this
-    // also lets the graph go to zero when no sound is playing):
-    if((maxLvl - minLvl) < 8) maxLvl = minLvl + 8;
-    minLvlAvg[x] = (minLvlAvg[x] * 7 + minLvl) >> 3; // Dampen min/max levels
-    maxLvlAvg[x] = (maxLvlAvg[x] * 7 + maxLvl) >> 3; // (fake rolling average)
-
-    // Second fixed-point scale based on dynamic min/max levels:
-    level = TOP * (col[x][colCount] - minLvlAvg[x]) /
-      (long)(maxLvlAvg[x] - minLvlAvg[x]);
-
-    // Clip output and convert to byte:
-    if(level < 0L)      c = 0;
-    else if(level > TOP) c = TOP; // Allow dot to go a couple pixels off top
-    else                c = (uint8_t)level;
-
-    if(c > peak[x]) peak[x] = c; // Keep dot on top
-
-    if (x == 1) {
-	// Color pixels based on rainbow gradient
-	for (i=0; i<N_PIXELS; i++) {
-		if (i >= level)
-			strip.setPixelColor(i, 0, 0, 0);
-		else
-			strip.setPixelColor(i, Wheel(map(i, 0, strip.numPixels() - 1, 30, 150)));
-
-	}
-
-    // Draw peak dot    
-	if (peak[x] > 0 && peak[x] <= N_PIXELS-1)
-		strip.setPixelColor(peak[x], Wheel(map(peak[x], 0, strip.numPixels() - 1, 30, 150)));
-    }
+  x = FFT_SLOT;
+  data   = (uint8_t *)pgm_read_word(&colData[x]);
+  nBins  = pgm_read_byte(&data[0]) + 2;
+  binNum = pgm_read_byte(&data[1]);
+  for(sum=0, i=2; i<nBins; i++)
+    sum += spectrum[binNum++] * pgm_read_byte(&data[i]); // Weighted
+  currLevel = col[x][colCount] = sum / colDiv[x];                    // Average
+  minLvl = maxLvl = col[x][0];
+  for(i=1; i<10; i++) { // Get range of prior 10 frames
+    if(col[x][i] < minLvl)      minLvl = col[x][i];
+    else if(col[x][i] > maxLvl) maxLvl = col[x][i];
   }
+  // minLvl and maxLvl indicate the extents of the FFT output, used
+  // for vertically scaling the output graph (so it looks interesting
+  // regardless of volume level).  If they're too close together though
+  // (e.g. at very low volume levels) the graph becomes super coarse
+  // and 'jumpy'...so keep some minimum distance between them (this
+  // also lets the graph go to zero when no sound is playing):
+  if((maxLvl - minLvl) < 8) maxLvl = minLvl + 8;
+  minLvlAvg[x] = (minLvlAvg[x] * 7 + minLvl) >> 3; // Dampen min/max levels
+  maxLvlAvg[x] = (maxLvlAvg[x] * 7 + maxLvl) >> 3; // (fake rolling average)
+
+  // Second fixed-point scale based on dynamic min/max levels:
+  lastLevel = (lastLevel * 7 + currLevel) >> 3;
+  
+  level = TOP * (currLevel - minLvlAvg[x]) /
+    (long)(maxLvlAvg[x] - minLvlAvg[x]);
+
+  // Clip output and convert to byte:
+  if(level < 0L)      c = 0;
+  else if(level > TOP) c = TOP; // Allow dot to go a couple pixels off top
+  else                c = (uint8_t)level;
+
+  if(c > peak[x]) peak[x] = c; // Keep dot on top
+
+  if (!haveHistoricVolume) {
+    haveHistoricVolume = true;
+    historicVolume = currLevel;
+  }
+  
+  historicVolume = (historicVolume * HISTORIC_SMOOTH_FACTOR + (double)maxLvlAvg[x]) / (HISTORIC_SMOOTH_FACTOR + 1.0);
+  int volumeEffect = (((COL_RANGE - COL_VAR)/2) * (double)maxLvlAvg[x] * HISTORIC_SCALE / historicVolume) + (COL_VAR/2);
+  
+  if (volumeEffect > (COL_RANGE - COL_VAR/2))
+    volumeEffect = (COL_RANGE - COL_VAR/2);
+  if (volumeEffect < (COL_VAR / 2))
+    volumeEffect = (COL_VAR / 2);
+
+  // Color pixels based on rainbow gradient
+  for (i=0; i<N_PIXELS; i++) {
+    if (i >= level)
+      strip.setPixelColor(i, 0, 0, 0);
+    else
+      strip.setPixelColor(i, Wheel(volumeEffect + map(i, 0, strip.numPixels() - 1, 0, COL_VAR) + MIN_COL));
+  }
+
+  // Draw peak dot    
+  if (peak[x] > 0 && peak[x] <= N_PIXELS-1)
+    strip.setPixelColor(peak[x], Wheel(volumeEffect + map(i, 0, strip.numPixels() - 1, 0, COL_VAR) + MIN_COL));
 
   strip.show();
 
@@ -215,20 +244,22 @@ ISR(ADC_vect) { // Audio-sampling interrupt
     ((sample > (512-noiseThreshold)) &&
      (sample < (512+noiseThreshold))) ? 0 :
     sample - 512; // Sign-convert for FFT; -512 to +511
-
+    
   if(++samplePos >= FFT_N) ADCSRA &= ~_BV(ADIE); // Buffer full, interrupt off
 }
 
 // Input a value 0 to 255 to get a color value.
 // The colors are a transition r - g - b - back to r.
 uint32_t Wheel(byte WheelPos) {
+//  WheelPos = 255 - WheelPos;
+  
 	if(WheelPos < 85) {
-		return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+		return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
 	} else if(WheelPos < 170) {
 		WheelPos -= 85;
-		return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+		return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
 	} else {
 		WheelPos -= 170;
-		return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+		return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
 	}
 }
