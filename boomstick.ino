@@ -6,22 +6,39 @@
 #include <math.h>
 #include <Wire.h>
 #include <Adafruit_NeoPixel.h>
+#include "boomstick.h"
 
 // LED hardware settings
 #define LED_PIN     6     // NeoPixel LED strand is connected to this pin
 #define N_PIXELS    60    // Number of pixels in strand
 #define TOP         (N_PIXELS + 2) // Allow dot to go slightly off scale
 
+// Accelerometer settings
+// #define ENABLE_ACCEL
+#define ACCEL_BRIGHTNESS_DIVISOR 3
+// Analog input pins
+#define ACCEL_X     A1
+#define ACCEL_Y     A2
+#define ACCEL_Z     A3
+// Calibration settings (run calibration sketch)
+#define A_XMIN      512
+#define A_XMAX      512
+#define A_YMIN      512
+#define A_YMAX      512
+#define A_ZMIN      512
+#define A_ZMAX      512
+
 // Animation settings
 #define FFT_SLOT    1     // Which FFT index (0-7) to pull level data from
 #define HISTORIC_SMOOTH_FACTOR 500.0
 #define HISTORIC_SCALE 1.5
 #define SMOOTH_FACTOR 5.0
-#define BAR_SCALE   1.5
+#define BAR_SCALE   1.2
+#define MIN_BAR_SIZE 40
 #define MIN_COL     60
 #define MAX_COL     255
 #define COL_RANGE   (MAX_COL - MIN_COL)
-#define COL_VAR     40
+#define COL_VAR     30
 
 // Microphone connects to Analog Pin 0.  Corresponding ADC channel number
 // varies among boards...it's ADC0 on Uno and Mega, ADC7 on Leonardo.
@@ -183,7 +200,7 @@ void loop() {
   // (e.g. at very low volume levels) the graph becomes super coarse
   // and 'jumpy'...so keep some minimum distance between them (this
   // also lets the graph go to zero when no sound is playing):
-  if((maxLvl - minLvl) < 8) maxLvl = minLvl + 8;
+  if((maxLvl - minLvl) < 8) maxLvl = minLvl + MIN_BAR_SIZE;
   minLvlAvg[x] = (minLvlAvg[x] * 7 + minLvl) >> 3; // Dampen min/max levels
   maxLvlAvg[x] = (maxLvlAvg[x] * 7 + maxLvl) >> 3; // (fake rolling average)
 
@@ -225,7 +242,13 @@ void loop() {
   if (peak[x] > 0 && peak[x] <= N_PIXELS-1)
     strip.setPixelColor(peak[x], Wheel(volumeEffect + map(i, 0, strip.numPixels() - 1, 0, COL_VAR) + MIN_COL));
 
-  strip.setBrightness(level * 255 / TOP);
+#ifdef ENABLE_ACCEL
+  Vector3 accel = ReadAccel();
+  int accelMag = abs(sqrt(sq(accel.x) + sq(accel.y) + sq(accel.z)) - 1000);
+  strip.setBrightness(accelMag / ACCEL_BRIGHTNESS_DIVISOR);
+#else
+  //strip.setBrightness(level * 255 / TOP);
+#endif
   strip.show();
 
   // Every third frame, make the peak pixels drop by 1:
@@ -265,4 +288,27 @@ uint32_t Wheel(byte WheelPos) {
 		WheelPos -= 170;
 		return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
 	}
+}
+
+Vector3 ReadAccel() {
+  Vector3 raw;
+  raw.x = analogRead(ACCEL_X);
+  raw.y = analogRead(ACCEL_Y);
+  raw.z = analogRead(ACCEL_Z);
+  return AccelRawToActual(raw);
+}
+
+// Takes a vector of raw accelerometer values, and converts it to
+// milliGs based on the calibration data
+Vector3 AccelRawToActual(Vector3 raw) {
+  Vector3 result;
+  result.x = ConvertRawToActual(raw.x, A_XMIN, A_XMAX);
+  result.y = ConvertRawToActual(raw.y, A_YMIN, A_YMAX);
+  result.z = ConvertRawToActual(raw.z, A_ZMIN, A_ZMAX);
+}
+
+int ConvertRawToActual(int raw, int minv, int maxv) {
+  int mid = (minv + maxv) / 2;
+  int rad = (maxv - minv) / 2;
+  return (raw - mid) * 1000 / rad;
 }
