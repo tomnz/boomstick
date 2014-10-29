@@ -39,6 +39,7 @@
 #define MAX_COL     255
 #define COL_RANGE   (MAX_COL - MIN_COL)
 #define COL_VAR     30
+#define PEAK_FALL_FRAMES 6
 
 // Microphone connects to Analog Pin 0.  Corresponding ADC channel number
 // varies among boards...it's ADC0 on Uno and Mega, ADC7 on Leonardo.
@@ -252,7 +253,7 @@ void loop() {
   strip.show();
 
   // Every third frame, make the peak pixels drop by 1:
-  if(++dotCount >= 3) {
+  if(++dotCount >= PEAK_FALL_FRAMES) {
     dotCount = 0;
     for(x=0; x<8; x++) {
       if(peak[x] > 0) peak[x]--;
