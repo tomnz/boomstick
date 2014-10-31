@@ -11,7 +11,7 @@
 // LED hardware settings
 #define LED_PIN     6     // NeoPixel LED strand is connected to this pin
 #define LED_PIN2    9     // Uncomment to enable second LED pin
-#define N_PIXELS    60    // Number of pixels in strand
+#define N_PIXELS    30    // Number of pixels in strand
 #define TOP         (N_PIXELS + 2) // Allow dot to go slightly off scale
 
 // Accelerometer settings
@@ -178,9 +178,6 @@ void loop() {
   uint32_t color;
   int      level, y, sum;
 
-  Serial.print(freeRam());
-  Serial.print("\n");
-  
   while(ADCSRA & _BV(ADIE)); // Wait for audio sampling to finish
 
   fft_input(capture, bfly_buff);   // Samples -> complex #s
@@ -348,11 +345,4 @@ int ConvertRawToActual(int raw, int minv, int maxv) {
   int mid = (minv + maxv) / 2;
   int rad = (maxv - minv) / 2;
   return (raw - mid) * 1000 / rad;
-}
-
-int freeRam () 
-{
-  extern int __heap_start, *__brkval; 
-  int v; 
-  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
 }
