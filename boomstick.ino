@@ -10,6 +10,7 @@
 
 // LED hardware settings
 #define LED_PIN     6     // NeoPixel LED strand is connected to this pin
+//#define LED_PIN2    5     // Uncomment to enable second LED pin
 #define N_PIXELS    60    // Number of pixels in strand
 #define TOP         (N_PIXELS + 2) // Allow dot to go slightly off scale
 
@@ -125,6 +126,11 @@ PROGMEM uint8_t
 Adafruit_NeoPixel
 	strip = Adafruit_NeoPixel(N_PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
+#ifdef LED_PIN2
+Adafruit_NeoPixel
+	strip2 = Adafruit_NeoPixel(N_PIXELS, LED_PIN2, NEO_GRB + NEO_KHZ800);
+#endif
+
 void setup() {
   
   const unsigned int BAUD_RATE = 9600;
@@ -146,6 +152,10 @@ void setup() {
   }
 
   strip.begin();
+ 
+#ifdef LED_PIN2
+  strip2.begin();
+#endif
 
   // Init ADC free-run mode; f = ( 16MHz/prescaler ) / 13 cycles/conversion 
   ADMUX  = ADC_CHANNEL; // Channel sel, right-adj, use AREF pin
@@ -165,6 +175,7 @@ void setup() {
 void loop() {
   uint8_t  i, x, L, *data, nBins, binNum, weighting, c;
   uint16_t minLvl, maxLvl, currLevel;
+  uint32_t color;
   int      level, y, sum;
 
   while(ADCSRA & _BV(ADIE)); // Wait for audio sampling to finish
@@ -233,24 +244,45 @@ void loop() {
 
   // Color pixels based on rainbow gradient
   for (i=0; i<N_PIXELS; i++) {
-    if (i >= level)
+    if (i >= level) {
       strip.setPixelColor(i, 0, 0, 0);
-    else
-      strip.setPixelColor(i, Wheel(volumeEffect + map(i, 0, strip.numPixels() - 1, 0, COL_VAR) + MIN_COL));
+#ifdef LED_PIN2
+      strip2.setPixelColor(i, 0, 0, 0);
+#endif
+    }
+    else {
+      color = Wheel(volumeEffect + map(i, 0, strip.numPixels() - 1, 0, COL_VAR) + MIN_COL);
+      strip.setPixelColor(i, color);
+#ifdef LED_PIN2
+      strip2.setPixelColor(i, color);
+#endif
+    }
   }
 
   // Draw peak dot    
-  if (peak[x] > 0 && peak[x] <= N_PIXELS-1)
-    strip.setPixelColor(peak[x], Wheel(volumeEffect + map(i, 0, strip.numPixels() - 1, 0, COL_VAR) + MIN_COL));
+  if (peak[x] > 0 && peak[x] <= N_PIXELS-1) {
+    color = Wheel(volumeEffect + map(i, 0, strip.numPixels() - 1, 0, COL_VAR) + MIN_COL);
+    strip.setPixelColor(peak[x], color);
+#ifdef LED_PIN2
+      strip2.setPixelColor(peak[x], color);
+#endif
+  }
 
 #ifdef ENABLE_ACCEL
   Vector3 accel = ReadAccel();
-  int accelMag = abs(sqrt(sq(accel.x) + sq(accel.y) + sq(accel.z)) - 1000);
-  strip.setBrightness(accelMag / ACCEL_BRIGHTNESS_DIVISOR);
+  int accelMag = abs(sqrt(sq(accel.x) + sq(accel.y) + sq(accel.z)) - 1000) / ACCEL_BRIGHTNESS_DIVISOR;
+  strip.setBrightness(accelMag);
+#ifdef LED_PIN2
+  strip2.setBrightness(accelMag);
+#endif
 #else
   //strip.setBrightness(level * 255 / TOP);
 #endif
+
   strip.show();
+#ifdef LED_PIN2
+  strip2.show();
+#endif
 
   // Every third frame, make the peak pixels drop by 1:
   if(++dotCount >= PEAK_FALL_FRAMES) {
@@ -265,7 +297,7 @@ void loop() {
 
 ISR(ADC_vect) { // Audio-sampling interrupt
   static const int16_t noiseThreshold = 4;
-  int16_t              sample         = ADC; // 0-1023
+  int16_t sample = ADC; // 0-1023
 
   capture[samplePos] =
     ((sample > (512-noiseThreshold)) &&
