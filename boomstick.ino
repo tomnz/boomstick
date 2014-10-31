@@ -3,10 +3,10 @@
 
 #include <avr/pgmspace.h>
 #include <ffft.h>
-//#include <math.h>
-//#include <Wire.h>
 #include <Adafruit_NeoPixel.h>
 #include "boomstick.h"
+
+//#define ENABLE_SERIAL
 
 // LED hardware settings
 #define LED_PIN     6     // NeoPixel LED strand is connected to this pin
@@ -40,7 +40,7 @@
 #define MAX_COL     255
 #define COL_RANGE   (MAX_COL - MIN_COL)
 #define COL_VAR     30
-#define PEAK_FALL_FRAMES 6
+#define PEAK_FALL_RATE 0.2
 
 // Microphone connects to Analog Pin 0.  Corresponding ADC channel number
 // varies among boards...it's ADC0 on Uno and Mega, ADC7 on Leonardo.
@@ -57,7 +57,6 @@ uint16_t      spectrum[FFT_N/2]; // Spectrum output buffer
 volatile byte samplePos = 0;     // Buffer position counter
 
 byte
-  peak[8],      // Peak level of each column; used for falling dots
   dotCount = 0, // Frame counter for delaying dot-falling speed
   colCount = 0; // Frame counter for storing past column data
 int
@@ -65,6 +64,7 @@ int
   minLvlAvg[8], // For dynamic adjustment of low & high ends of graph,
   maxLvlAvg[8], // pseudo rolling averages for the prior few frames.
   colDiv[8];    // Used when filtering FFT output to 8 columns
+float peak;     // Peak level; used for falling dots
 
 double lastLevel = 0;
 
@@ -132,13 +132,13 @@ Adafruit_NeoPixel
 #endif
 
 void setup() {
-  
+#ifdef ENABLE_SERIAL
   const unsigned int BAUD_RATE = 9600;
   Serial.begin(BAUD_RATE);
+#endif
 
   uint8_t i, j, nBins, binNum, *data;
 
-  memset(peak, 0, sizeof(peak));
   memset(col , 0, sizeof(col));
 
   for(i=0; i<8; i++) {
@@ -175,7 +175,7 @@ void setup() {
 void loop() {
   uint8_t  i, x, L, *data, nBins, binNum, weighting, c;
   uint16_t minLvl, maxLvl, currLevel;
-  uint32_t color;
+  Color color;
   int      level, y, sum;
 
   while(ADCSRA & _BV(ADIE)); // Wait for audio sampling to finish
@@ -227,7 +227,7 @@ void loop() {
   else if(level > TOP) c = TOP; // Allow dot to go a couple pixels off top
   else                c = (uint8_t)level;
 
-  if(c > peak[x]) peak[x] = c; // Keep dot on top
+  if(c > peak) peak = c; // Keep dot on top
 
   if (!haveHistoricVolume) {
     haveHistoricVolume = true;
@@ -252,21 +252,27 @@ void loop() {
     }
     else {
       color = Wheel(volumeEffect + map(i, 0, strip.numPixels() - 1, 0, COL_VAR) + MIN_COL);
-      strip.setPixelColor(i, color);
+      strip.setPixelColor(i, color.r, color.g, color.b);
 #ifdef LED_PIN2
-      strip2.setPixelColor(i, color);
+      strip2.setPixelColor(i, color.r, color.g, color.b);
 #endif
     }
   }
 
-  // Draw peak dot    
-  if (peak[x] > 0 && peak[x] <= N_PIXELS-1) {
+  // Draw peak dot 
+  if (peak > 2) {
     color = Wheel(volumeEffect + map(i, 0, strip.numPixels() - 1, 0, COL_VAR) + MIN_COL);
-    strip.setPixelColor(peak[x], color);
+    for (i = max((int)peak - 2, level); i < min((int)peak + 2, N_PIXELS - 1); i++) {
+      float intensity = 1.0 - min(abs((float)i - peak) / 1.5, 1.0);
+      Color peakColor = Color((int)((float)color.r * intensity), (int)((float)color.g * intensity), (int)((float)color.b * intensity));
+      strip.setPixelColor(i, peakColor.r, peakColor.g, peakColor.b);
+
 #ifdef LED_PIN2
-      strip2.setPixelColor(peak[x], color);
+      strip2.setPixelColor(i, peakColor.r, peakColor.g, peakColor.b);
 #endif
+    } 
   }
+  
 
 #ifdef ENABLE_ACCEL
   Vector3 accel = ReadAccel();
@@ -286,12 +292,7 @@ void loop() {
 
   
   // Every third frame, make the peak pixels drop by 1:
-  if(++dotCount >= PEAK_FALL_FRAMES) {
-    dotCount = 0;
-    for(x=0; x<8; x++) {
-      if(peak[x] > 0) peak[x]--;
-    }
-  }
+  peak -= PEAK_FALL_RATE;
 
   if(++colCount >= 10) colCount = 0;
 }
@@ -310,17 +311,17 @@ ISR(ADC_vect) { // Audio-sampling interrupt
 
 // Input a value 0 to 255 to get a color value.
 // The colors are a transition r - g - b - back to r.
-uint32_t Wheel(byte WheelPos) {
+Color Wheel(byte WheelPos) {
 //  WheelPos = 255 - WheelPos;
   
 	if(WheelPos < 85) {
-		return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+		return Color(255 - WheelPos * 3, 0, WheelPos * 3);
 	} else if(WheelPos < 170) {
 		WheelPos -= 85;
-		return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+		return Color(0, WheelPos * 3, 255 - WheelPos * 3);
 	} else {
 		WheelPos -= 170;
-		return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+		return Color(WheelPos * 3, 255 - WheelPos * 3, 0);
 	}
 }
 
