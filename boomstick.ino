@@ -34,15 +34,22 @@
 #define FFT_SLOT2   0
 #define HISTORIC_SMOOTH_FACTOR 500.0
 #define HISTORIC_SCALE 1.5
-#define SMOOTH_FACTOR 5.0
-#define BAR_SCALE   1.2
+#define SMOOTH_FACTOR 3.0
+#define BAR_SCALE   1.0
 #define MIN_BAR_SIZE 40
 #define MIN_COL     60
 #define MAX_COL     255
 #define COL_RANGE   (MAX_COL - MIN_COL)
-#define COL_VAR     30
+#define COL_VAR     40
 #define PEAK_FALL_RATE 0.2
-#define HISTORIC_FRAMES 20
+#define HISTORIC_FRAMES 40
+#define NOISE_THRESHOLD 5
+#define LEVEL_CUTOFF 30
+#define BACKGROUND_CUTOFF (N_PIXELS / 3)
+#define BACKGROUND_MAX 0.3
+#define BACKGROUND_INCREASE 0.001
+#define BACKGROUND_DECREASE 0.01
+#define BACKGROUND_COLOR 70
 
 // Microphone connects to Analog Pin 0.  Corresponding ADC channel number
 // varies among boards...it's ADC0 on Uno and Mega, ADC7 on Leonardo.
@@ -65,8 +72,11 @@ int
   col[HISTORIC_FRAMES],   // Column levels for the prior 10 frames
   minLvlAvg, // For dynamic adjustment of low & high ends of graph,
   maxLvlAvg, // pseudo rolling averages for the prior few frames.
-  colDiv[8];    // Used when filtering FFT output to 8 columns
-float peak;     // Peak level; used for falling dots
+  colDiv[8],    // Used when filtering FFT output to 8 columns
+  background = 0;
+float
+  peak,         // Peak level; used for falling dots
+  backgroundLevel = 0.0; // Brightness of background
 
 double lastLevel = 0;
 
@@ -179,6 +189,7 @@ void loop() {
   uint8_t  i, x, L, *data, nBins, binNum, weighting, c;
   uint16_t minLvl, maxLvl, currLevel;
   Color color;
+  Color backgroundColor;
   int      level, y, sum;
 
   while(ADCSRA & _BV(ADIE)); // Wait for audio sampling to finish
@@ -220,7 +231,7 @@ void loop() {
   col[colCount] = max(col[colCount], sum / colDiv[x]);
 #endif
   
-  currLevel = col[colCount];
+  currLevel = (col[colCount] < LEVEL_CUTOFF) ? 0 : col[colCount];
   minLvl = maxLvl = col[0];
   for(i=1; i < HISTORIC_FRAMES; i++) { // Get range of prior 10 frames
     if(col[i] < minLvl)      minLvl = col[i];
@@ -246,6 +257,22 @@ void loop() {
   if(level < 0L)      c = 0;
   else if(level > TOP) c = TOP; // Allow dot to go a couple pixels off top
   else                c = (uint8_t)level;
+  
+  if (level <= BACKGROUND_CUTOFF && backgroundLevel < BACKGROUND_MAX) {
+    backgroundLevel += BACKGROUND_INCREASE;
+  }
+  else if (level > BACKGROUND_CUTOFF && backgroundLevel > 0) {
+    backgroundLevel -= BACKGROUND_DECREASE;
+  }
+  backgroundLevel = max(0, min(backgroundLevel, BACKGROUND_MAX));
+  if (backgroundLevel > 0) {
+    Color bg = Wheel(BACKGROUND_COLOR);
+    backgroundColor = Color((float)bg.r * backgroundLevel, (float)bg.g * backgroundLevel, (float)bg.b * backgroundLevel);
+  }
+  else {
+    backgroundColor = Color(0, 0, 0);
+  }
+  
 
   if(c > peak) peak = c; // Keep dot on top
 
@@ -254,8 +281,13 @@ void loop() {
     historicVolume = currLevel;
   }
   
-  historicVolume = (historicVolume * HISTORIC_SMOOTH_FACTOR + (double)currLevel) / (HISTORIC_SMOOTH_FACTOR + 1.0);
-  int volumeEffect = (((COL_RANGE - COL_VAR)/2) * (double)currLevel * HISTORIC_SCALE / historicVolume) + (COL_VAR/2);
+  historicVolume = (historicVolume * HISTORIC_SMOOTH_FACTOR + (double)lastLevel) / (HISTORIC_SMOOTH_FACTOR + 1.0);
+  int volumeEffect = (((COL_RANGE - COL_VAR)/2) * (double)lastLevel * HISTORIC_SCALE / historicVolume) + (COL_VAR/2);
+  
+  if (lastLevel < historicVolume / 2) {
+    lastLevel = 0;
+    level = 0;
+  }
   
   if (volumeEffect > (COL_RANGE - COL_VAR/2))
     volumeEffect = (COL_RANGE - COL_VAR/2);
@@ -265,9 +297,9 @@ void loop() {
   // Color pixels based on rainbow gradient
   for (i=0; i<N_PIXELS; i++) {
     if (i >= level) {
-      strip.setPixelColor(i, 0, 0, 0);
+      strip.setPixelColor(i, backgroundColor.r, backgroundColor.g, backgroundColor.b);
 #ifdef LED_PIN2
-      strip2.setPixelColor(i, 0, 0, 0);
+      strip2.setPixelColor(i, backgroundColor.r, backgroundColor.g, backgroundColor.b);
 #endif
     }
     else {
@@ -281,7 +313,7 @@ void loop() {
 
   // Draw peak dot 
   if (peak > 2) {
-    color = Wheel(volumeEffect + map(i, 0, strip.numPixels() - 1, 0, COL_VAR) + MIN_COL);
+    color = Wheel(volumeEffect + map(peak, 0, strip.numPixels() - 1, 0, COL_VAR) + MIN_COL);
     for (i = max((int)peak - 2, level); i < min((int)peak + 2, N_PIXELS - 1); i++) {
       float intensity = 1.0 - min(abs((float)i - peak) / 1.5, 1.0);
       Color peakColor = Color((int)((float)color.r * intensity), (int)((float)color.g * intensity), (int)((float)color.b * intensity));
@@ -317,12 +349,11 @@ void loop() {
 }
 
 ISR(ADC_vect) { // Audio-sampling interrupt
-  static const int16_t noiseThreshold = 4;
   int16_t sample = ADC; // 0-1023
 
   capture[samplePos] =
-    ((sample > (512-noiseThreshold)) &&
-     (sample < (512+noiseThreshold))) ? 0 :
+    ((sample > (512-NOISE_THRESHOLD)) &&
+     (sample < (512+NOISE_THRESHOLD))) ? 0 :
     sample - 512; // Sign-convert for FFT; -512 to +511
     
   if(++samplePos >= FFT_N) ADCSRA &= ~_BV(ADIE); // Buffer full, interrupt off
