@@ -31,6 +31,7 @@
 
 // Animation settings
 #define FFT_SLOT    1     // Which FFT index (0-7) to pull level data from
+#define FFT_SLOT2   0
 #define HISTORIC_SMOOTH_FACTOR 500.0
 #define HISTORIC_SCALE 1.5
 #define SMOOTH_FACTOR 5.0
@@ -41,6 +42,7 @@
 #define COL_RANGE   (MAX_COL - MIN_COL)
 #define COL_VAR     30
 #define PEAK_FALL_RATE 0.2
+#define HISTORIC_FRAMES 20
 
 // Microphone connects to Analog Pin 0.  Corresponding ADC channel number
 // varies among boards...it's ADC0 on Uno and Mega, ADC7 on Leonardo.
@@ -60,9 +62,9 @@ byte
   dotCount = 0, // Frame counter for delaying dot-falling speed
   colCount = 0; // Frame counter for storing past column data
 int
-  col[8][10],   // Column levels for the prior 10 frames
-  minLvlAvg[8], // For dynamic adjustment of low & high ends of graph,
-  maxLvlAvg[8], // pseudo rolling averages for the prior few frames.
+  col[HISTORIC_FRAMES],   // Column levels for the prior 10 frames
+  minLvlAvg, // For dynamic adjustment of low & high ends of graph,
+  maxLvlAvg, // pseudo rolling averages for the prior few frames.
   colDiv[8];    // Used when filtering FFT output to 8 columns
 float peak;     // Peak level; used for falling dots
 
@@ -141,9 +143,10 @@ void setup() {
 
   memset(col , 0, sizeof(col));
 
+  minLvlAvg = 0;
+  maxLvlAvg = 512;
+
   for(i=0; i<8; i++) {
-    minLvlAvg[i] = 0;
-    maxLvlAvg[i] = 512;
     data         = (uint8_t *)pgm_read_word(&colData[i]);
     nBins        = pgm_read_byte(&data[0]) + 2;
     binNum       = pgm_read_byte(&data[1]);
@@ -198,13 +201,30 @@ void loop() {
   data   = (uint8_t *)pgm_read_word(&colData[x]);
   nBins  = pgm_read_byte(&data[0]) + 2;
   binNum = pgm_read_byte(&data[1]);
-  for(sum=0, i=2; i<nBins; i++)
+  for(sum=0, i=2; i<nBins; i++) {
     sum += spectrum[binNum++] * pgm_read_byte(&data[i]); // Weighted
-  currLevel = col[x][colCount] = sum / colDiv[x];                    // Average
-  minLvl = maxLvl = col[x][0];
-  for(i=1; i<10; i++) { // Get range of prior 10 frames
-    if(col[x][i] < minLvl)      minLvl = col[x][i];
-    else if(col[x][i] > maxLvl) maxLvl = col[x][i];
+  }
+  col[colCount] = sum / colDiv[x];                    // Average
+
+#ifdef FFT_SLOT2
+  x = FFT_SLOT2;
+  data   = (uint8_t *)pgm_read_word(&colData[x]);
+  nBins  = pgm_read_byte(&data[0]) + 2;
+  binNum = pgm_read_byte(&data[1]);
+  for(sum=0, i=2; i<nBins; i++) {
+    sum += spectrum[binNum++] * pgm_read_byte(&data[i]); // Weighted
+  }
+
+  // Possible combinations with previous reading
+  //col[colCount] += sum / colDiv[x];
+  col[colCount] = max(col[colCount], sum / colDiv[x]);
+#endif
+  
+  currLevel = col[colCount];
+  minLvl = maxLvl = col[0];
+  for(i=1; i < HISTORIC_FRAMES; i++) { // Get range of prior 10 frames
+    if(col[i] < minLvl)      minLvl = col[i];
+    else if(col[i] > maxLvl) maxLvl = col[i];
   }
   // minLvl and maxLvl indicate the extents of the FFT output, used
   // for vertically scaling the output graph (so it looks interesting
@@ -213,14 +233,14 @@ void loop() {
   // and 'jumpy'...so keep some minimum distance between them (this
   // also lets the graph go to zero when no sound is playing):
   if((maxLvl - minLvl) < 8) maxLvl = minLvl + MIN_BAR_SIZE;
-  minLvlAvg[x] = (minLvlAvg[x] * 7 + minLvl) >> 3; // Dampen min/max levels
-  maxLvlAvg[x] = (maxLvlAvg[x] * 7 + maxLvl) >> 3; // (fake rolling average)
+  minLvlAvg = (minLvlAvg * 7 + minLvl) >> 3; // Dampen min/max levels
+  maxLvlAvg = (maxLvlAvg * 7 + maxLvl) >> 3; // (fake rolling average)
 
   // Second fixed-point scale based on dynamic min/max levels:
   lastLevel = (lastLevel * SMOOTH_FACTOR + (double)currLevel) / (SMOOTH_FACTOR + 1.0);
   
-  level = (int)((TOP * BAR_SCALE * lastLevel - TOP * (double)(minLvlAvg[x])) /
-    ((double)(maxLvlAvg[x]) - (double)(minLvlAvg[x])));
+  level = (int)((TOP * BAR_SCALE * lastLevel - TOP * (double)minLvlAvg) /
+    ((double)maxLvlAvg - (double)minLvlAvg));
 
   // Clip output and convert to byte:
   if(level < 0L)      c = 0;
@@ -234,8 +254,8 @@ void loop() {
     historicVolume = currLevel;
   }
   
-  historicVolume = (historicVolume * HISTORIC_SMOOTH_FACTOR + (double)maxLvlAvg[x]) / (HISTORIC_SMOOTH_FACTOR + 1.0);
-  int volumeEffect = (((COL_RANGE - COL_VAR)/2) * (double)maxLvlAvg[x] * HISTORIC_SCALE / historicVolume) + (COL_VAR/2);
+  historicVolume = (historicVolume * HISTORIC_SMOOTH_FACTOR + (double)currLevel) / (HISTORIC_SMOOTH_FACTOR + 1.0);
+  int volumeEffect = (((COL_RANGE - COL_VAR)/2) * (double)currLevel * HISTORIC_SCALE / historicVolume) + (COL_VAR/2);
   
   if (volumeEffect > (COL_RANGE - COL_VAR/2))
     volumeEffect = (COL_RANGE - COL_VAR/2);
@@ -289,12 +309,11 @@ void loop() {
 #ifdef LED_PIN2
   strip2.show();
 #endif
-
   
-  // Every third frame, make the peak pixels drop by 1:
+  // Drop the peak by its fall rate
   peak -= PEAK_FALL_RATE;
 
-  if(++colCount >= 10) colCount = 0;
+  if(++colCount >= HISTORIC_FRAMES) colCount = 0;
 }
 
 ISR(ADC_vect) { // Audio-sampling interrupt
