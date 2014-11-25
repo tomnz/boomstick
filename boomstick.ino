@@ -10,24 +10,26 @@
 
 // LED hardware settings
 #define LED_PIN     6     // NeoPixel LED strand is connected to this pin
-#define LED_PIN2    9     // Uncomment to enable second LED pin
-#define N_PIXELS    30    // Number of pixels in strand
+//#define LED_PIN2    9     // Uncomment to enable second LED pin
+#define N_PIXELS    28    // Number of pixels in strand
 #define TOP         (N_PIXELS + 2) // Allow dot to go slightly off scale
 
 // Accelerometer settings
-// #define ENABLE_ACCEL
-#define ACCEL_BRIGHTNESS_DIVISOR 3
+//#define ENABLE_ACCEL
+#define ACCEL_MAX_G 1000
+#define ACCEL_MIN_BRIGHTNESS 10
+#define ACCEL_MAX_BRIGHTNESS 255
 // Analog input pins
-#define ACCEL_X     A1
+#define ACCEL_X     A3
 #define ACCEL_Y     A2
-#define ACCEL_Z     A3
+#define ACCEL_Z     A1
 // Calibration settings (run calibration sketch)
-#define A_XMIN      512
-#define A_XMAX      512
-#define A_YMIN      512
-#define A_YMAX      512
-#define A_ZMIN      512
-#define A_ZMAX      512
+#define A_XMIN      264
+#define A_XMAX      396
+#define A_YMIN      261
+#define A_YMAX      393
+#define A_ZMIN      270
+#define A_ZMAX      402
 
 // Animation settings
 #define FFT_SLOT    1     // Which FFT index (0-7) to pull level data from
@@ -144,11 +146,17 @@ Adafruit_NeoPixel
 #endif
 
 void setup() {
+  analogReference(EXTERNAL);
+  
 #ifdef ENABLE_SERIAL
   const unsigned int BAUD_RATE = 9600;
   Serial.begin(BAUD_RATE);
 #endif
 
+  pinMode(ACCEL_X, INPUT);
+  pinMode(ACCEL_Y, INPUT);
+  pinMode(ACCEL_Z, INPUT);
+  
   uint8_t i, j, nBins, binNum, *data;
 
   memset(col , 0, sizeof(col));
@@ -193,10 +201,23 @@ void loop() {
   int      level, y, sum;
 
   while(ADCSRA & _BV(ADIE)); // Wait for audio sampling to finish
+  
+#ifdef ENABLE_ACCEL
+  ADCSRA &= ~_BV(ADEN); // Disable ADC
 
+  int accelMag = ReadAccel();
+
+  ADCSRA = _BV(ADEN)  | // ADC enable
+           _BV(ADSC)  | // ADC start
+           _BV(ADATE) | // Auto trigger
+           _BV(ADIE)  | // Interrupt enable
+           _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0); // 128:1 / 13 = 9615 Hz
+#else
+  ADCSRA |= _BV(ADIE);
+#endif
+  
   fft_input(capture, bfly_buff);   // Samples -> complex #s
   samplePos = 0;                   // Reset sample counter
-  ADCSRA |= _BV(ADIE);             // Resume sampling interrupt
   fft_execute(bfly_buff);          // Process complex data
   fft_output(bfly_buff, spectrum); // Complex -> spectrum
 
@@ -295,6 +316,12 @@ void loop() {
     volumeEffect = (COL_VAR / 2);
 
   // Color pixels based on rainbow gradient
+  strip.clear();
+  strip.setBrightness(255);
+#ifdef LED_PIN2
+  strip2.clear();
+  strip2.setBrightness(255);
+#endif
   for (i=0; i<N_PIXELS; i++) {
     if (i >= level) {
       strip.setPixelColor(i, backgroundColor.r, backgroundColor.g, backgroundColor.b);
@@ -327,11 +354,12 @@ void loop() {
   
 
 #ifdef ENABLE_ACCEL
-  Vector3 accel = ReadAccel();
-  int accelMag = abs(sqrt(sq(accel.x) + sq(accel.y) + sq(accel.z)) - 1000) / ACCEL_BRIGHTNESS_DIVISOR;
-  strip.setBrightness(accelMag);
+  //Vector3 accel = ;
+  int accelBright = (int)((float)ACCEL_MIN_BRIGHTNESS + (float)accelMag * (float)(ACCEL_MAX_BRIGHTNESS - ACCEL_MIN_BRIGHTNESS) / (float)ACCEL_MAX_G);
+  //int accelBright = ACCEL_MIN_BRIGHTNESS;
+  strip.setBrightness(accelBright);
 #ifdef LED_PIN2
-  strip2.setBrightness(accelMag);
+  strip2.setBrightness(accelBright);
 #endif
 #else
   //strip.setBrightness(level * 255 / TOP);
@@ -375,25 +403,28 @@ Color Wheel(byte WheelPos) {
 	}
 }
 
-Vector3 ReadAccel() {
-  Vector3 raw;
-  raw.x = analogRead(ACCEL_X);
-  raw.y = analogRead(ACCEL_Y);
-  raw.z = analogRead(ACCEL_Z);
-  return AccelRawToActual(raw);
+#ifdef ENABLE_ACCEL
+int ReadAccel() {
+  int x, y, z, g;
+  x = ConvertRawToActual(analogRead(ACCEL_X), A_XMIN, A_XMAX);
+  y = ConvertRawToActual(analogRead(ACCEL_Y), A_YMIN, A_YMAX);
+  z = ConvertRawToActual(analogRead(ACCEL_Z), A_ZMIN, A_ZMAX);
+  g = max(min(abs(sqrt(sq(x) + sq(y) + sq(z)) - 1000), ACCEL_MAX_G), 0);
+  return g;
 }
 
 // Takes a vector of raw accelerometer values, and converts it to
 // milliGs based on the calibration data
-Vector3 AccelRawToActual(Vector3 raw) {
-  Vector3 result;
-  result.x = ConvertRawToActual(raw.x, A_XMIN, A_XMAX);
-  result.y = ConvertRawToActual(raw.y, A_YMIN, A_YMAX);
-  result.z = ConvertRawToActual(raw.z, A_ZMIN, A_ZMAX);
-}
+//Vector3 AccelRawToActual(Vector3 raw) {
+//  raw.x = ConvertRawToActual(raw.x, A_XMIN, A_XMAX);
+//  raw.y = ConvertRawToActual(raw.y, A_YMIN, A_YMAX);
+//  raw.z = ConvertRawToActual(raw.z, A_ZMIN, A_ZMAX);
+//  return raw;
+//}
 
 int ConvertRawToActual(int raw, int minv, int maxv) {
   int mid = (minv + maxv) / 2;
   int rad = (maxv - minv) / 2;
   return (raw - mid) * 1000 / rad;
 }
+#endif
