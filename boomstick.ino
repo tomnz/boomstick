@@ -138,10 +138,10 @@ void setup() {
   minLvlAvg = 0;
   maxLvlAvg = 512;
 
-  for(i=0; i<8; i++) {
+  for (i = 0; i < 8; i++) {
     data         = (uint8_t *)pgm_read_word(&colData[i]);
     nBins        = pgm_read_byte(&data[0]) + 2;
-    for(colDiv[i]=0, j=2; j<nBins; j++)
+    for (colDiv[i] = 0, j = 2; j < nBins; j++)
       colDiv[i] += pgm_read_byte(&data[j]);
   }
 
@@ -237,12 +237,17 @@ void loop() {
   lastLevel = (lastLevel * SMOOTH_FACTOR + (double)currLevel) / (SMOOTH_FACTOR + 1.0);
 
   level = (int)((TOP * BAR_SCALE * lastLevel - TOP * (double)minLvlAvg) /
-    ((double)maxLvlAvg - (double)minLvlAvg));
+    ((double)maxLvlAvg - (double)minLvlAvg) - (double)TOP * historicVolume * 0.1);
 
   // Clip output and convert to byte:
   if (level < 0L)       c = 0;
   else if (level > TOP) c = TOP; // Allow dot to go a couple pixels off top
   else                  c = (uint8_t)level;
+
+
+  if (c > peak) {
+    peak = c; // Keep dot on top
+  }
 
   if (level <= BACKGROUND_CUTOFF && backgroundLevel < BACKGROUND_MAX) {
     backgroundLevel += BACKGROUND_INCREASE;
@@ -259,10 +264,6 @@ void loop() {
     backgroundColor = Color(0, 0, 0);
   }
 
-  if (c > peak) {
-    peak = c; // Keep dot on top
-  }
-
   if (!haveHistoricVolume) {
     haveHistoricVolume = true;
     historicVolume = currLevel;
@@ -271,7 +272,7 @@ void loop() {
   historicVolume = (historicVolume * HISTORIC_SMOOTH_FACTOR + (double)lastLevel) / (HISTORIC_SMOOTH_FACTOR + 1.0);
   int volumeEffect = (((COL_RANGE - COL_VAR)/2) * (double)lastLevel * HISTORIC_SCALE / historicVolume) + (COL_VAR/2);
 
-  if (lastLevel < historicVolume / 2) {
+  if (lastLevel < historicVolume * 0.3) {
     lastLevel = 0;
     level = 0;
   }
