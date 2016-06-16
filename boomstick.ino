@@ -49,8 +49,8 @@ float
 
 double lastLevel = 0;
 
-double historicVolume;
-boolean haveHistoricVolume = false;
+double historicLevel;
+boolean havehistoricLevel = false;
 
 /*
 These tables were arrived at through testing, modeling and trial and error,
@@ -169,6 +169,7 @@ void setup() {
 void loop() {
   uint8_t  i, x, L, *data, nBins, binNum, c;
   uint16_t minLvl, maxLvl, currLevel;
+  int minLevelCurrent, maxLevelCurrent;
   Color color;
   Color backgroundColor;
   int      level, y, sum;
@@ -227,17 +228,21 @@ void loop() {
   // (e.g. at very low volume levels) the graph becomes super coarse
   // and 'jumpy'...so keep some minimum distance between them (this
   // also lets the graph go to zero when no sound is playing):
-  if ((maxLvl - minLvl) < 8) {
-    maxLvl = minLvl + MIN_BAR_SIZE;
-  }
   minLvlAvg = (minLvlAvg * 7 + minLvl) >> 3; // Dampen min/max levels
   maxLvlAvg = (maxLvlAvg * 7 + maxLvl) >> 3; // (fake rolling average)
+  if (maxLvl > maxLvlAvg) {
+    maxLvlAvg = maxLvl;
+  }
 
   // Second fixed-point scale based on dynamic min/max levels:
   lastLevel = (lastLevel * SMOOTH_FACTOR + (double)currLevel) / (SMOOTH_FACTOR + 1.0);
+  historicLevel = (historicLevel * HISTORIC_SMOOTH_FACTOR + (double)lastLevel) / (HISTORIC_SMOOTH_FACTOR + 1.0);
 
-  level = (int)((TOP * BAR_SCALE * lastLevel - TOP * (double)minLvlAvg) /
-    ((double)maxLvlAvg - (double)minLvlAvg) - (double)TOP * historicVolume * 0.1);
+  minLevelCurrent = max(historicLevel * 2.0, minLvlAvg);
+  maxLevelCurrent = max(maxLvlAvg, minLevelCurrent + historicLevel * 3.5);
+
+  level = (int)((double)TOP * (BAR_SCALE * lastLevel - (double)minLevelCurrent) /
+    ((double)maxLevelCurrent - (double)minLevelCurrent));
 
   // Clip output and convert to byte:
   if (level < 0L)       c = 0;
@@ -264,15 +269,14 @@ void loop() {
     backgroundColor = Color(0, 0, 0);
   }
 
-  if (!haveHistoricVolume) {
-    haveHistoricVolume = true;
-    historicVolume = currLevel;
+  if (!havehistoricLevel) {
+    havehistoricLevel = true;
+    historicLevel = currLevel;
   }
 
-  historicVolume = (historicVolume * HISTORIC_SMOOTH_FACTOR + (double)lastLevel) / (HISTORIC_SMOOTH_FACTOR + 1.0);
-  int volumeEffect = (((COL_RANGE - COL_VAR)/2) * (double)lastLevel * HISTORIC_SCALE / historicVolume) + (COL_VAR/2);
+  int volumeEffect = (((COL_RANGE - COL_VAR)/2) * (double)lastLevel * HISTORIC_SCALE / historicLevel) + (COL_VAR/2);
 
-  if (lastLevel < historicVolume * 0.3) {
+  if (lastLevel < historicLevel * 0.4) {
     lastLevel = 0;
     level = 0;
   }
