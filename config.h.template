@@ -24,6 +24,9 @@
 // "End" of the string - one past the end so the peak dot can move off scale
 #define TOP         (N_PIXELS + 2)
 
+// When defined, uses an analog signal to vary the overall brightness
+//#define BRIGHTNESS_PIN 4
+
 ////////////////////////
 // ANIMATION SETTINGS
 

@@ -52,6 +52,9 @@ double lastLevel = 0;
 double historicLevel;
 boolean havehistoricLevel = false;
 
+int16_t samples = -1;
+uint8_t brightness = 255;
+
 /*
 These tables were arrived at through testing, modeling and trial and error,
 exposing the unit to assorted music and sounds.  But there's no One Perfect
@@ -159,7 +162,7 @@ void setup() {
            _BV(ADIE)  | // Interrupt enable
            _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0); // 128:1 / 13 = 9615 Hz
   ADCSRB = 0;                // Free run mode, no high MUX bit
-  DIDR0  = 1 << ADC_CHANNEL; // Turn off digital input for ADC pin
+  DIDR0  = 0x3F; // Turn off digital input for ADC pin
   TIMSK0 = 0;                // Timer0 off
 
   sei(); // Enable interrupts
@@ -176,6 +179,21 @@ void loop() {
 
   while(ADCSRA & _BV(ADIE)); // Wait for audio sampling to finish
 
+  // Set brightness
+#ifdef BRIGHTNESS_PIN
+  strip.setBrightness(brightness);
+#ifdef LED_PIN2
+  strip2.setBrightness(brightness);
+#endif
+#else
+  // No brightness pin - set to max
+  strip.setBrightness(255);
+#ifdef LED_PIN2
+  strip2.setBrightness(255);
+#endif
+#endif
+
+  // Re-enable the ADC interrupt
   ADCSRA |= _BV(ADIE);
 
   fft_input(capture, bfly_buff);   // Samples -> complex #s
@@ -290,10 +308,8 @@ void loop() {
 
   // Color pixels based on rainbow gradient
   strip.clear();
-  strip.setBrightness(255);
 #ifdef LED_PIN2
   strip2.clear();
-  strip2.setBrightness(255);
 #endif
   for (i = 0; i < N_PIXELS; i++) {
     if (i >= level) {
@@ -328,6 +344,36 @@ void loop() {
 }
 
 ISR(ADC_vect) { // Audio-sampling interrupt
+#ifdef BRIGHTNESS_PIN
+  if (samples < 5 && samples >= 0) {
+  } else if (samples == 5) {
+    // Sample brightness
+    brightness = (uint8_t)map(max(ADC, 350), 350, 1024, 5, 255);
+
+    // Switch back to audio for next time
+    ADMUX = ADC_CHANNEL;
+  } else {
+    int16_t sample = ADC; // 0-1023
+
+    capture[samplePos] =
+      ((sample > (512-NOISE_THRESHOLD)) &&
+       (sample < (512+NOISE_THRESHOLD))) ? 0 :
+      sample - 512; // Sign-convert for FFT; -512 to +511
+
+
+    if(++samplePos >= FFT_N) ADCSRA &= ~_BV(ADIE); // Buffer full, interrupt off
+
+    if (samples == -1) {
+      // Switch input
+      ADMUX = BRIGHTNESS_PIN;
+    }
+  }
+
+  samples++;
+  if (samples > BRIGHTNESS_SAMPLE_INTERVAL) {
+    samples = -1;
+  }
+#else
   int16_t sample = ADC; // 0-1023
 
   capture[samplePos] =
@@ -336,6 +382,7 @@ ISR(ADC_vect) { // Audio-sampling interrupt
     sample - 512; // Sign-convert for FFT; -512 to +511
 
   if(++samplePos >= FFT_N) ADCSRA &= ~_BV(ADIE); // Buffer full, interrupt off
+#endif
 }
 
 void setPixel(int idx, Color color) {
