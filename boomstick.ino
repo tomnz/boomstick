@@ -32,7 +32,7 @@
 int16_t       capture[FFT_N];    // Audio capture buffer
 complex_t     bfly_buff[FFT_N];  // FFT "butterfly" buffer
 uint16_t      spectrum[FFT_N/2]; // Spectrum output buffer
-volatile byte samplePos = 0;     // Buffer position counter
+volatile uint16_t samplePos = 0;     // Buffer position counter
 
 byte
   dotCount = 0, // Frame counter for delaying dot-falling speed
@@ -52,8 +52,13 @@ double lastLevel = 0;
 double historicLevel;
 boolean havehistoricLevel = false;
 
-int16_t samples = -1;
-uint8_t brightness = 255;
+#ifdef BRIGHTNESS_PIN
+volatile byte currentPin = BRIGHTNESS_PIN;
+volatile bool brightnessUpdated = false;
+volatile uint8_t brightness = 255;
+#else
+volatile byte currentPin = ADC_CHANNEL;
+#endif
 
 /*
 These tables were arrived at through testing, modeling and trial and error,
@@ -155,14 +160,17 @@ void setup() {
 #endif
 
   // Init ADC free-run mode; f = ( 16MHz/prescaler ) / 13 cycles/conversion
-  ADMUX  = ADC_CHANNEL; // Channel sel, right-adj, use AREF pin
+  ADMUX  = currentPin; // Channel sel, right-adj, use AREF pin
   ADCSRA = _BV(ADEN)  | // ADC enable
            _BV(ADSC)  | // ADC start
            _BV(ADATE) | // Auto trigger
            _BV(ADIE)  | // Interrupt enable
            _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0); // 128:1 / 13 = 9615 Hz
-  ADCSRB = 0;                // Free run mode, no high MUX bit
-  DIDR0  = 0x3F; // Turn off digital input for ADC pin
+  ADCSRB = 0x40;                // Free run mode, no high MUX bit
+  DIDR0  = 1 << ADC_CHANNEL; // Turn off digital input for ADC pin
+#ifdef BRIGHTNESS_PIN
+  DIDR0 |= 1 << BRIGHTNESS_PIN;
+#endif
   TIMSK0 = 0;                // Timer0 off
 
   sei(); // Enable interrupts
@@ -177,27 +185,29 @@ void loop() {
   Color backgroundColor;
   int      level, y, sum;
 
-  while(ADCSRA & _BV(ADIE)); // Wait for audio sampling to finish
+  while (ADCSRA & _BV(ADIE)); // Wait for audio sampling to finish
+  samplePos = 0;                   // Reset sample counter
 
   // Set brightness
 #ifdef BRIGHTNESS_PIN
-  strip.setBrightness(brightness);
+  if (brightnessUpdated) {
+    strip.setBrightness(brightness);
+    strip.show();
 #ifdef LED_PIN2
-  strip2.setBrightness(brightness);
+    strip2.setBrightness(brightness);
+    strip2.show();
 #endif
-#else
-  // No brightness pin - set to max
-  strip.setBrightness(255);
-#ifdef LED_PIN2
-  strip2.setBrightness(255);
-#endif
+
+    brightnessUpdated = false;
+    // Don't bother doing anything else in this loop
+    return;
+  }
 #endif
 
   // Re-enable the ADC interrupt
   ADCSRA |= _BV(ADIE);
 
   fft_input(capture, bfly_buff);   // Samples -> complex #s
-  samplePos = 0;                   // Reset sample counter
   fft_execute(bfly_buff);          // Process complex data
   fft_output(bfly_buff, spectrum); // Complex -> spectrum
 
@@ -344,44 +354,40 @@ void loop() {
 }
 
 ISR(ADC_vect) { // Audio-sampling interrupt
+  int16_t sample = ADCL; // 0-1023
+  sample += ADCH << 8;
+
 #ifdef BRIGHTNESS_PIN
-  if (samples < 5 && samples >= 0) {
-  } else if (samples == 5) {
-    // Sample brightness
-    brightness = (uint8_t)map(max(ADC, 350), 350, 1024, 5, 255);
+  if (currentPin == BRIGHTNESS_PIN) {
+    if (++samplePos >= 2) {
+      // Sample brightness
+      brightness = (uint8_t)map(sample, 0, 1024, 5, 255);
+      brightnessUpdated = true;
 
-    // Switch back to audio for next time
-    ADMUX = ADC_CHANNEL;
+      // Disable interrupt
+      ADCSRA &= ~_BV(ADIE);
+      // Switch back to audio for next time
+      currentPin = ADC_CHANNEL;
+      ADMUX = currentPin;
+    }
   } else {
-    int16_t sample = ADC; // 0-1023
-
+#endif
     capture[samplePos] =
       ((sample > (512-NOISE_THRESHOLD)) &&
        (sample < (512+NOISE_THRESHOLD))) ? 0 :
       sample - 512; // Sign-convert for FFT; -512 to +511
 
 
-    if(++samplePos >= FFT_N) ADCSRA &= ~_BV(ADIE); // Buffer full, interrupt off
-
-    if (samples == -1) {
-      // Switch input
-      ADMUX = BRIGHTNESS_PIN;
+    if (++samplePos >= FFT_N) {
+      ADCSRA &= ~_BV(ADIE); // Buffer full, interrupt off
+#ifdef BRIGHTNESS_PIN
+      // Get a brightness reading next time
+      currentPin = BRIGHTNESS_PIN;
+      ADMUX = currentPin;
+#endif
     }
+#ifdef BRIGHTNESS_PIN
   }
-
-  samples++;
-  if (samples > BRIGHTNESS_SAMPLE_INTERVAL) {
-    samples = -1;
-  }
-#else
-  int16_t sample = ADC; // 0-1023
-
-  capture[samplePos] =
-    ((sample > (512-NOISE_THRESHOLD)) &&
-     (sample < (512+NOISE_THRESHOLD))) ? 0 :
-    sample - 512; // Sign-convert for FFT; -512 to +511
-
-  if(++samplePos >= FFT_N) ADCSRA &= ~_BV(ADIE); // Buffer full, interrupt off
 #endif
 }
 
