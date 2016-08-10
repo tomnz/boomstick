@@ -13,10 +13,12 @@
  */
 
 #include "config.h"
+#include "boomstick.h"
 #include <avr/pgmspace.h>
 #include <ffft.h>
-#include <Adafruit_NeoPixel.h>
-#include "boomstick.h"
+#include "lights.h"
+#include "effect.h"
+#include "effect_bars.h"
 
 //#define ENABLE_SERIAL
 
@@ -41,16 +43,10 @@ int
   col[HISTORIC_FRAMES],   // Column levels for the prior n frames
   minLvlAvg, // For dynamic adjustment of low & high ends of graph,
   maxLvlAvg, // pseudo rolling averages for the prior few frames.
-  colDiv[8],    // Used when filtering FFT output to 8 columns
-  background = 0;
-float
-  peak,         // Peak level; used for falling dots
-  backgroundLevel = 0.0; // Brightness of background
+  colDiv[8];    // Used when filtering FFT output to 8 columns
 
-double lastLevel = 0;
-
-double historicLevel;
-boolean havehistoricLevel = false;
+double smoothedLevel = 0;
+double historicLevel = 0;
 
 #ifdef BRIGHTNESS_PIN
 volatile byte currentPin = BRIGHTNESS_PIN;
@@ -112,24 +108,18 @@ const uint8_t PROGMEM
     col0data, col1data, col2data, col3data,
     col4data, col5data, col6data, col7data };
 
-// For mirrored strings, we need to double the number of pixels
-#ifdef MIRROR_DUPE
-Adafruit_NeoPixel
-	strip = Adafruit_NeoPixel(N_PIXELS * 2, LED_PIN, NEO_GRB + NEO_KHZ800);
-#else
-Adafruit_NeoPixel
-	strip = Adafruit_NeoPixel(N_PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
-#endif
+Lights lights = Lights();
 
-#ifdef LED_PIN2
-#ifdef MIRROR_DUPE
-Adafruit_NeoPixel
-	strip2 = Adafruit_NeoPixel(N_PIXELS * 2, LED_PIN2, NEO_GRB + NEO_KHZ800);
-#else
-Adafruit_NeoPixel
-	strip2 = Adafruit_NeoPixel(N_PIXELS, LED_PIN2, NEO_GRB + NEO_KHZ800);
-#endif
-#endif
+#define N_EFFECTS 1
+EffectBars effectBars = EffectBars();
+
+Effect* effects[N_EFFECTS] = {
+  &effectBars
+};
+uint8_t currentEffect = 0;
+
+
+bool lit = false;
 
 void setup() {
   analogReference(EXTERNAL);
@@ -153,11 +143,7 @@ void setup() {
       colDiv[i] += pgm_read_byte(&data[j]);
   }
 
-  strip.begin();
-
-#ifdef LED_PIN2
-  strip2.begin();
-#endif
+  lights.begin();
 
   // Init ADC free-run mode; f = ( 16MHz/prescaler ) / 13 cycles/conversion
   ADMUX  = currentPin; // Channel sel, right-adj, use AREF pin
@@ -180,10 +166,8 @@ void setup() {
 void loop() {
   uint8_t  i, x, L, *data, nBins, binNum, c;
   uint16_t minLvl, maxLvl, currLevel;
-  int minLevelCurrent, maxLevelCurrent;
-  Color color;
-  Color backgroundColor;
-  int      level, y, sum;
+  int minLevelCurrent, maxLevelCurrent, y, sum;
+  double transformedLevel;
 
   while (ADCSRA & _BV(ADIE)); // Wait for audio sampling to finish
   samplePos = 0;                   // Reset sample counter
@@ -191,12 +175,8 @@ void loop() {
   // Set brightness
 #ifdef BRIGHTNESS_PIN
   if (brightnessUpdated) {
-    strip.setBrightness(brightness);
-    strip.show();
-#ifdef LED_PIN2
-    strip2.setBrightness(brightness);
-    strip2.show();
-#endif
+    lights.setBrightness(brightness);
+    lights.show();
 
     brightnessUpdated = false;
     // Don't bother doing anything else in this loop
@@ -206,6 +186,9 @@ void loop() {
 
   // Re-enable the ADC interrupt
   ADCSRA |= _BV(ADIE);
+  lit = !lit;
+  digitalWrite(13, lit);
+
 
   fft_input(capture, bfly_buff);   // Samples -> complex #s
   fft_execute(bfly_buff);          // Process complex data
@@ -263,92 +246,21 @@ void loop() {
   }
 
   // Second fixed-point scale based on dynamic min/max levels:
-  lastLevel = (lastLevel * SMOOTH_FACTOR + (double)currLevel) / (SMOOTH_FACTOR + 1.0);
-  historicLevel = (historicLevel * HISTORIC_SMOOTH_FACTOR + (double)lastLevel) / (HISTORIC_SMOOTH_FACTOR + 1.0);
+  smoothedLevel = (smoothedLevel * SMOOTH_FACTOR + (double)currLevel) / (SMOOTH_FACTOR + 1.0);
+  historicLevel = (historicLevel * HISTORIC_SMOOTH_FACTOR + (double)smoothedLevel) / (HISTORIC_SMOOTH_FACTOR + 1.0);
 
   minLevelCurrent = max(historicLevel * 1.2, minLvlAvg);
   maxLevelCurrent = max(maxLvlAvg, minLevelCurrent + historicLevel * 1.8);
 
-  level = (int)((double)TOP * (BAR_SCALE * lastLevel - (double)minLevelCurrent) /
+  transformedLevel = ((double)((double)BAR_SCALE * smoothedLevel - (double)minLevelCurrent) /
     ((double)maxLevelCurrent - (double)minLevelCurrent));
 
-  // Clip output and convert to byte:
-  if (level < 0L)       c = 0;
-  else if (level > TOP) c = TOP; // Allow dot to go a couple pixels off top
-  else                  c = (uint8_t)level;
+  // Call out to given effect
+  effects[0]->loop(&lights, transformedLevel, smoothedLevel, historicLevel);
 
-
-  if (c > peak) {
-    peak = c; // Keep dot on top
-  }
-
-  if (level <= BACKGROUND_CUTOFF && backgroundLevel < BACKGROUND_MAX) {
-    backgroundLevel += BACKGROUND_INCREASE;
-  }
-  else if (level > BACKGROUND_CUTOFF && backgroundLevel > 0) {
-    backgroundLevel -= BACKGROUND_DECREASE;
-  }
-  backgroundLevel = max(0, min(backgroundLevel, BACKGROUND_MAX));
-  if (backgroundLevel > 0) {
-    Color bg = Wheel(BACKGROUND_COLOR);
-    backgroundColor = Color((float)bg.r * backgroundLevel, (float)bg.g * backgroundLevel, (float)bg.b * backgroundLevel);
-  }
-  else {
-    backgroundColor = Color(0, 0, 0);
-  }
-
-  if (!havehistoricLevel) {
-    havehistoricLevel = true;
-    historicLevel = currLevel;
-  }
-
-  int volumeEffect = (((COL_RANGE - COL_VAR)/2) * (double)lastLevel * HISTORIC_SCALE / historicLevel) + (COL_VAR/2);
-
-  if (lastLevel < historicLevel * 0.4) {
-    lastLevel = 0;
-    level = 0;
-  }
-
-  if (volumeEffect > (COL_RANGE - COL_VAR/2)) {
-    volumeEffect = (COL_RANGE - COL_VAR/2);
-  }
-  if (volumeEffect < (COL_VAR / 2)) {
-    volumeEffect = (COL_VAR / 2);
-  }
-
-  // Color pixels based on rainbow gradient
-  strip.clear();
-#ifdef LED_PIN2
-  strip2.clear();
-#endif
-  for (i = 0; i < N_PIXELS; i++) {
-    if (i >= level) {
-      setPixel(i, backgroundColor);
-    }
-    else {
-      color = Wheel(volumeEffect + map(i, 0, strip.numPixels() - 1, 0, COL_VAR) + MIN_COL);
-      setPixel(i, color);
-    }
-  }
-
-  // Draw peak dot
-  if (peak > 2) {
-    color = Wheel(volumeEffect + map(peak, 0, strip.numPixels() - 1, 0, COL_VAR) + MIN_COL);
-    for (i = max((int)peak - 2, level); i < min((int)peak + 2, N_PIXELS - 1); i++) {
-      float intensity = 1.0 - min(abs((float)i - peak) / 1.5, 1.0);
-      Color peakColor = Color((int)((float)color.r * intensity), (int)((float)color.g * intensity), (int)((float)color.b * intensity));
-      setPixel(i, peakColor);
-    }
-  }
-
-
-  strip.show();
-#ifdef LED_PIN2
-  strip2.show();
-#endif
-
-  // Drop the peak by its fall rate
-  peak -= PEAK_FALL_RATE;
+  // if (smoothedLevel < historicLevel * 0.4) {
+  //   smoothedLevel = 0;
+  // }
 
   if (++colCount >= HISTORIC_FRAMES) colCount = 0;
 }
@@ -389,37 +301,4 @@ ISR(ADC_vect) { // Audio-sampling interrupt
 #ifdef BRIGHTNESS_PIN
   }
 #endif
-}
-
-void setPixel(int idx, Color color) {
-#ifdef FLIP
-    idx = N_PIXELS - idx - 1;
-#endif
-
-  strip.setPixelColor(idx, color.r, color.g, color.b);
-#ifdef LED_PIN2
-  strip2.setPixelColor(idx, color.r, color.g, color.b);
-#endif
-#ifdef MIRROR_DUPE
-  strip.setPixelColor(N_PIXELS * 2 - idx - 1, color.r, color.g, color.b);
-#ifdef LED_PIN2
-  strip2.setPixelColor(N_PIXELS * 2 - idx - 1, color.r, color.g, color.b);
-#endif
-#endif
-}
-
-// Input a value 0 to 255 to get a color value.
-// The colors are a transition r - g - b - back to r.
-Color Wheel(byte wheelPos) {
-//  WheelPos = 255 - WheelPos;
-
-	if(wheelPos < 85) {
-		return Color(255 - wheelPos * 3, 0, wheelPos * 3);
-	} else if(wheelPos < 170) {
-		wheelPos -= 85;
-		return Color(0, wheelPos * 3, 255 - wheelPos * 3);
-	} else {
-		wheelPos -= 170;
-		return Color(wheelPos * 3, 255 - wheelPos * 3, 0);
-	}
 }
