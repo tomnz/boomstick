@@ -8,9 +8,6 @@
 // LED strand data pin
 #define LED_PIN     6
 
-// Uncommend to enable second LED pin
-//#define LED_PIN2    9
-
 // Number of pixels in strand
 #define N_PIXELS    24
 
