@@ -16,9 +16,11 @@
 #include "boomstick.h"
 #include <avr/pgmspace.h>
 #include <ffft.h>
+#include "color.h"
 #include "lights.h"
 #include "effect.h"
 #include "effect_bars.h"
+#include "effect_pulse.h"
 
 //#define ENABLE_SERIAL
 
@@ -110,13 +112,15 @@ const uint8_t PROGMEM
 
 Lights lights = Lights();
 
-#define N_EFFECTS 1
+#define N_EFFECTS 2
 EffectBars effectBars = EffectBars();
+EffectPulse effectPulse = EffectPulse();
 
 Effect* effects[N_EFFECTS] = {
-  &effectBars
+  &effectBars,
+  &effectPulse
 };
-uint8_t currentEffect = 0;
+uint8_t currentEffect = INITIAL_EFFECT;
 
 
 bool lit = false;
@@ -128,6 +132,8 @@ void setup() {
   const unsigned int BAUD_RATE = 9600;
   Serial.begin(BAUD_RATE);
 #endif
+
+  randomSeed(analogRead(0));
 
   uint8_t i, j, nBins, *data;
 
@@ -256,7 +262,7 @@ void loop() {
     ((double)maxLevelCurrent - (double)minLevelCurrent));
 
   // Call out to given effect
-  effects[0]->loop(&lights, transformedLevel, smoothedLevel, historicLevel);
+  effects[currentEffect]->loop(&lights, transformedLevel, smoothedLevel, historicLevel);
 
   // if (smoothedLevel < historicLevel * 0.4) {
   //   smoothedLevel = 0;
