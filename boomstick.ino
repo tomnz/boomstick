@@ -266,8 +266,8 @@ void loop() {
   lastLevel = (lastLevel * SMOOTH_FACTOR + (double)currLevel) / (SMOOTH_FACTOR + 1.0);
   historicLevel = (historicLevel * HISTORIC_SMOOTH_FACTOR + (double)lastLevel) / (HISTORIC_SMOOTH_FACTOR + 1.0);
 
-  minLevelCurrent = max(historicLevel * 2.0, minLvlAvg);
-  maxLevelCurrent = max(maxLvlAvg, minLevelCurrent + historicLevel * 3.5);
+  minLevelCurrent = max(historicLevel * 1.2, minLvlAvg);
+  maxLevelCurrent = max(maxLvlAvg, minLevelCurrent + historicLevel * 1.8);
 
   level = (int)((double)TOP * (BAR_SCALE * lastLevel - (double)minLevelCurrent) /
     ((double)maxLevelCurrent - (double)minLevelCurrent));
@@ -354,7 +354,7 @@ void loop() {
 }
 
 ISR(ADC_vect) { // Audio-sampling interrupt
-  int16_t sample = ADCL; // 0-1023
+  int sample = ADCL; // 0-1023
   sample += ADCH << 8;
 
 #ifdef BRIGHTNESS_PIN
