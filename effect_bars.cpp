@@ -1,4 +1,5 @@
 #include "effect_bars.h"
+#include "color.h"
 
 EffectBars::EffectBars() {
 
