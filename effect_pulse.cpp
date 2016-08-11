@@ -7,7 +7,12 @@ EffectPulse::EffectPulse():
 }
 
 void EffectPulse::chooseNewColor() {
+#ifdef PULSE_RANDOM
   currentColorPos = random(0, 255);
+#else
+  currentColorPos = (uint8_t)(((uint16_t)currentColorPos + PULSE_COLOR_INCREMENT) % 255);
+#endif
+
   currentColor = Wheel(currentColorPos);
 }
 
@@ -36,7 +41,7 @@ void EffectPulse::loop(Lights *lights, double transformedLevel, double smoothedL
   }
 
   // Clamp brightness
-  double brightness = max(0.1, min(1, transformedLevel));
+  double brightness = max(PULSE_MIN_BRIGHTNESS, min(1.0, transformedLevel + PULSE_BRIGHTNESS_BOOST));
 
   Color color = Color(
     (int)((double)currentColor.r * brightness),
