@@ -29,6 +29,9 @@
 //   1 = Pulse
 #define INITIAL_EFFECT 1
 
+// When defined, enables a button on a digital input to change effects
+#define EFFECT_BUTTON_PIN 8
+
 ////////////////////
 // AUDIO SETTINGS
 
@@ -39,8 +42,10 @@
 #define FFT_SLOT2   1
 
 // Amount of smoothing for historic volume value
-#define HISTORIC_SMOOTH_FACTOR 500.0
-#define HISTORIC_SCALE 1.2
+#define HISTORIC_SMOOTH_FACTOR_UP 300.0
+// Faster historic volume drop, so we stay closer to the low end of current
+// general noise
+#define HISTORIC_SMOOTH_FACTOR_DOWN 150.0
 
 // Amount of smoothing for current volume value
 #define SMOOTH_FACTOR 3.0
@@ -75,16 +80,32 @@
 #define BACKGROUND_INCREASE 0.001
 #define BACKGROUND_DECREASE 0.01
 
+#define HISTORIC_SCALE 1.2
+
 ///////////////////////////
 // PULSE EFFECT SETTINGS
 
 // High/low values for transformed level that determine when a beat
 // stops and starts
-#define BEAT_LOW 0.4
+#define BEAT_LOW 0.5
 #define BEAT_HIGH 0.7
 
 // Number of frames the level must be below BEAT_LOW to consider a beat
 // finished
-#define BEAT_LOW_FRAMES 100
+#define BEAT_LOW_FRAMES 20
+
+// Minimum brightness at lowest volume
+#define PULSE_MIN_BRIGHTNESS 0.4
+
+// Boost amount of brightness - helps prevent low volumes being clamped by
+// the minimum brightness
+#define PULSE_BRIGHTNESS_BOOST 0.3
+
+// If uncommented, pulse will pick a random color each time instead of
+// advancing the color wheel
+// #define PULSE_RANDOM
+
+// Advances the color wheel by this amount on each beat
+#define PULSE_COLOR_INCREMENT 55
 
 #endif

@@ -122,6 +122,9 @@ Effect* effects[N_EFFECTS] = {
 };
 uint8_t currentEffect = INITIAL_EFFECT;
 
+#ifdef EFFECT_BUTTON_PIN
+bool changedEffect = false;
+#endif
 
 bool lit = false;
 
@@ -134,6 +137,10 @@ void setup() {
 #endif
 
   randomSeed(analogRead(0));
+
+#ifdef EFFECT_BUTTON_PIN
+  pinMode(EFFECT_BUTTON_PIN, INPUT);
+#endif
 
   uint8_t i, j, nBins, *data;
 
@@ -174,6 +181,16 @@ void loop() {
   uint16_t minLvl, maxLvl, currLevel;
   int minLevelCurrent, maxLevelCurrent, y, sum;
   double transformedLevel;
+
+  // Change the effect if necessary
+  if (digitalRead(EFFECT_BUTTON_PIN) == HIGH) {
+    if (!changedEffect) {
+      changedEffect = true;
+      currentEffect = (currentEffect + 1) % N_EFFECTS;
+    }
+  } else if (changedEffect) {
+    changedEffect = false;
+  }
 
   while (ADCSRA & _BV(ADIE)); // Wait for audio sampling to finish
   samplePos = 0;                   // Reset sample counter
@@ -253,10 +270,14 @@ void loop() {
 
   // Second fixed-point scale based on dynamic min/max levels:
   smoothedLevel = (smoothedLevel * SMOOTH_FACTOR + (double)currLevel) / (SMOOTH_FACTOR + 1.0);
-  historicLevel = (historicLevel * HISTORIC_SMOOTH_FACTOR + (double)smoothedLevel) / (HISTORIC_SMOOTH_FACTOR + 1.0);
+  double historicSmoothFactor = HISTORIC_SMOOTH_FACTOR_DOWN;
+  if (smoothedLevel > historicLevel) {
+    historicSmoothFactor = HISTORIC_SMOOTH_FACTOR_UP;
+  }
+  historicLevel = (historicLevel * historicSmoothFactor + (double)smoothedLevel) / (historicSmoothFactor + 1.0);
 
   minLevelCurrent = max(historicLevel * 1.2, minLvlAvg);
-  maxLevelCurrent = max(maxLvlAvg, minLevelCurrent + historicLevel * 1.8);
+  maxLevelCurrent = max(maxLvlAvg * 1.2, minLevelCurrent + max(MIN_BAR_SIZE, historicLevel * 1.6));
 
   transformedLevel = ((double)((double)BAR_SCALE * smoothedLevel - (double)minLevelCurrent) /
     ((double)maxLevelCurrent - (double)minLevelCurrent));
