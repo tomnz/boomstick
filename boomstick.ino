@@ -39,7 +39,6 @@ uint16_t      spectrum[FFT_N/2]; // Spectrum output buffer
 volatile uint16_t samplePos = 0;     // Buffer position counter
 
 byte
-  dotCount = 0, // Frame counter for delaying dot-falling speed
   colCount = 0; // Frame counter for storing past column data
 int
   col[HISTORIC_FRAMES],   // Column levels for the prior n frames
