@@ -4,6 +4,7 @@
 #include "config.h"
 #include "effect.h"
 #include "lights.h"
+#include "color.h"
 
 class EffectBars : public Effect {
 public:

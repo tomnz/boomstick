@@ -4,6 +4,10 @@ EffectPulse::EffectPulse():
   beatOn(false), lowFrames(0)
 {
   chooseNewColor();
+
+  for (int i = 0; i < N_PIXELS; i++) {
+    brightness[i] = 1.0;
+  }
 }
 
 void EffectPulse::chooseNewColor() {
@@ -19,6 +23,7 @@ void EffectPulse::chooseNewColor() {
 void EffectPulse::loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel) {
   // Detect beat
   bool newBeat = false;
+  uint8_t i;
 
   if (beatOn) {
     if (lowFrames >= BEAT_LOW_FRAMES) {
@@ -38,18 +43,30 @@ void EffectPulse::loop(Lights *lights, double transformedLevel, double smoothedL
 
   if (newBeat) {
     chooseNewColor();
+
+    // Randomly boost the LEDs on a beat
+    float randVal;
+    for (i = 0; i < N_PIXELS; i++) {
+      randVal = ((float)(random(0, 100)) * PULSE_BRIGHTNESS_BEAT) / 100.0;
+      brightness[i] = randVal * randVal;
+    }
+  }
+
+  // Pull the brightnesses towards 1.0
+  for (i = 0; i < N_PIXELS; i++) {
+    brightness[i] = brightness[i] * PULSE_FADE_FACTOR / (PULSE_FADE_FACTOR + 1.0);
   }
 
   // Clamp brightness
-  double brightness = max(PULSE_MIN_BRIGHTNESS, min(1.0, transformedLevel + PULSE_BRIGHTNESS_BOOST));
+  Color color = Color();
+  float currBrightness;
+  for (i = 0; i < N_PIXELS; i++) {
+    currBrightness = min(1.0, max(PULSE_MIN_BRIGHTNESS, min(0.3, transformedLevel / 4.0 + PULSE_BRIGHTNESS_BOOST)) + brightness[i]);
 
-  Color color = Color(
-    (int)((double)currentColor.r * brightness),
-    (int)((double)currentColor.g * brightness),
-    (int)((double)currentColor.b * brightness)
-  );
+    color.r = (int)((float)currentColor.r * currBrightness);
+    color.g = (int)((float)currentColor.g * currBrightness);
+    color.b = (int)((float)currentColor.b * currBrightness);
 
-  for (int i = 0; i < N_PIXELS; i++) {
     lights->setPixel(i, color);
   }
 

@@ -182,6 +182,7 @@ void loop() {
   int minLevelCurrent, maxLevelCurrent, y, sum;
   double transformedLevel;
 
+#ifdef EFFECT_BUTTON_PIN
   // Change the effect if necessary
   if (digitalRead(EFFECT_BUTTON_PIN) == HIGH) {
     if (!changedEffect) {
@@ -191,6 +192,7 @@ void loop() {
   } else if (changedEffect) {
     changedEffect = false;
   }
+#endif
 
   while (ADCSRA & _BV(ADIE)); // Wait for audio sampling to finish
   samplePos = 0;                   // Reset sample counter
@@ -277,7 +279,7 @@ void loop() {
   historicLevel = (historicLevel * historicSmoothFactor + (double)smoothedLevel) / (historicSmoothFactor + 1.0);
 
   minLevelCurrent = max(historicLevel * 1.2, minLvlAvg);
-  maxLevelCurrent = max(maxLvlAvg * 1.2, minLevelCurrent + max(MIN_BAR_SIZE, historicLevel * 1.6));
+  maxLevelCurrent = max(maxLvlAvg * 1.2, minLevelCurrent + max(MIN_BAR_SIZE, historicLevel * 0.7));
 
   transformedLevel = ((double)((double)BAR_SCALE * smoothedLevel - (double)minLevelCurrent) /
     ((double)maxLevelCurrent - (double)minLevelCurrent));

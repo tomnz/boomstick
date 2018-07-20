@@ -1,5 +1,4 @@
 #include "effect_bars.h"
-#include "color.h"
 
 EffectBars::EffectBars() {
 
@@ -55,8 +54,6 @@ void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLe
   }
 
   // Color pixels based on rainbow gradient
-  lights->clear();
-
   for (i = 0; i < N_PIXELS; i++) {
     if (i >= barLevel) {
       lights->setPixel(i, backgroundColor);

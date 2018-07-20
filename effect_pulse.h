@@ -18,6 +18,8 @@ protected:
   uint8_t currentColorPos;
   bool beatOn;
   uint16_t lowFrames;
+
+  float brightness[N_PIXELS];
 };
 
 #endif
