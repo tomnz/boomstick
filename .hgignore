@@ -1,4 +1,0 @@
-syntax: glob
-*.suo
-.idea
-config.h
