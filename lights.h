@@ -16,8 +16,11 @@ public:
   void setBrightness(uint8_t brightness);
 
 protected:
-  CRGB *strip;
-  int size;
+#ifdef MIRROR_DUPE
+  CRGBArray<N_PIXELS*2> strip;
+#else
+  CRGBArray<N_PIXELS> strip;
+#endif
 };
 
 #endif

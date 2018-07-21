@@ -1,30 +1,21 @@
 #include "lights.h"
 
 Lights::Lights() {
-	// For mirrored strings, we need to double the number of pixels
-	#ifdef MIRROR_DUPE
-	size = N_PIXELS * 2;
-	#else
-	size = N_PIXELS;
-	#endif
-	
-	strip = new CRGB[size];
-
 	// TODO: Support max refresh rate and wattage config?
-	FastLED.addLeds<NEOPIXEL, LED_PIN>(strip, size)
+	FastLED.addLeds<NEOPIXEL, LED_PIN>(strip, strip.size())
 		.setCorrection(TypicalLEDStrip);
 }
 
 void Lights::setPixel(int idx, CRGB color) {
+	if (idx < 0 || idx >= N_PIXELS) {
+		return;
+	}
+
 #ifdef FLIP
 	idx = N_PIXELS - idx - 1;
 #endif
 
 	strip[idx] = color;
-
-#ifdef MIRROR_DUPE
-	strip[N_PIXELS * 2 - idx - 1] = color;
-#endif
 }
 
 void Lights::clear() {
@@ -32,6 +23,10 @@ void Lights::clear() {
 }
 
 void Lights::show() {
+#ifdef MIRROR_DUPE
+	strip(N_PIXELS * 2 - 1, N_PIXELS) = strip(0, N_PIXELS - 1);
+#endif
+
 	FastLED.show();
 }
 
