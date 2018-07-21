@@ -1,23 +1,25 @@
 #ifndef CONFIG
 #define CONFIG
 
-//#define ENABLE_SERIAL
+#define ENABLE_SERIAL
 
 //////////////////////////
 // LED HARDWARE SETTINGS
 
 // LED strand data pin
 #define LED_PIN     5
+#define LED_COLOR_ORDER GRB
 
 // Number of pixels in strand
 #define N_PIXELS    25
+#define LAST_PIXEL  (N_PIXELS - 1)
 
 // When enabled, uses N_PIXELS * 2 pixels on the data line, mirrored in the
 // center
-// #define MIRROR_DUPE
+//#define MIRROR_DUPE
 
 // When enabled, reverses the ordering of the LED output
-// #define FLIP
+//#define FLIP
 
 // When defined, uses an analog signal to vary the overall brightness
 #define BRIGHTNESS_PIN 1
@@ -29,7 +31,7 @@
 #define INITIAL_EFFECT 0
 
 // When defined, enables a button on a digital input to change effects
-#define EFFECT_BUTTON_PIN 8
+// #define EFFECT_BUTTON_PIN 8
 
 ////////////////////
 // AUDIO SETTINGS
@@ -68,10 +70,7 @@
 // Color difference between lower and upper parts of bar
 #define BAR_COL_VAR     60
 
-// "End" of the string - one past the end so the peak dot can move off scale
-#define BAR_TOP         (N_PIXELS + 2)
-
-#define BAR_SCALE   1.6
+#define BAR_SCALE   2.0
 #define MIN_BAR_SIZE 70
 
 // Rate at which peak dot falls

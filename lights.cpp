@@ -7,8 +7,16 @@ Lights::Lights() {
 }
 
 void Lights::setPixel(int idx, CRGB color) {
-	if (idx < 0 || idx >= N_PIXELS) return;
+	if (idx < 0 || idx > LAST_PIXEL) return;
 	leds[idx] = color;
+}
+
+CRGB Lights::pixel(int idx) {
+	return leds[idx];
+}
+
+CRGBSet Lights::pixels() {
+	return leds;
 }
 
 void Lights::clear() {
@@ -18,17 +26,17 @@ void Lights::clear() {
 void Lights::show() {
 #ifdef MIRROR_DUPE
 	#ifdef FLIP
-		strip(N_PIXELS - 1, 0) = leds;
+		strip(LAST_PIXEL, 0) = leds;
 		strip(N_PIXELS, N_PIXELS * 2 - 1) = leds;
 	#else
-		strip(0, N_PIXELS - 1) = leds;
+		strip(0, LAST_PIXEL) = leds;
 		strip(N_PIXELS * 2 - 1, N_PIXELS) = leds;
 	#endif
 #else
 	#ifdef FLIP
-		strip(N_PIXELS - 1, 0) = leds;
+		strip(LAST_PIXEL, 0) = leds;
 	#else
-		strip(0, N_PIXELS - 1) = leds;
+		strip(0, LAST_PIXEL) = leds;
 	#endif
 #endif
 

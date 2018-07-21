@@ -6,25 +6,22 @@ EffectBars::EffectBars() {
 }
 
 void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel) {
-  uint8_t clippedLevel, i;
+  uint8_t idx;
 
-  int barLevel = (int)(transformedLevel * (double)BAR_TOP * (double)BAR_SCALE);
+  int barLevel = (int)(transformedLevel * (double)LAST_PIXEL);
 
-  // Clip output and convert to byte:
   if (barLevel < 0) {
-    clippedLevel = 0;
+    barLevel = -1;
   }
-  else if (barLevel > BAR_TOP) {
-    clippedLevel = BAR_TOP; // Allow dot to go a couple pixels off top
-  }
-  else {
-    clippedLevel = (uint8_t)barLevel;
+  if (barLevel > LAST_PIXEL) {
+    barLevel = LAST_PIXEL;
   }
 
-  if (clippedLevel > peak) {
-    peak = clippedLevel; // Keep dot on top
+  if (barLevel > peak) {
+    peak = barLevel; // Keep dot on top
   }
 
+  // Draw background
   if (barLevel <= BACKGROUND_CUTOFF && bgLevel < BACKGROUND_MAX) {
     bgLevel += BACKGROUND_INCREASE;
   }
@@ -42,11 +39,16 @@ void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLe
     bgColor = CRGB(0, 0, 0);
   }
 
-  int volumeEffect = (((BAR_COL_RANGE - BAR_COL_VAR)/2) * (double)smoothedLevel * HISTORIC_SCALE / historicLevel) + (BAR_COL_VAR/2);
-
+  // Ensure we get no bar at times - makes the output more lively
   if (smoothedLevel < historicLevel * 0.4) {
-    barLevel = 0;
+    barLevel = -1;
   }
+  if (barLevel < LAST_PIXEL) {
+    lights->pixels()(barLevel+1, LAST_PIXEL).fill_solid(bgColor);
+  }
+
+  // Draw bar
+  int volumeEffect = (((BAR_COL_RANGE - BAR_COL_VAR)/2) * (double)smoothedLevel * HISTORIC_SCALE / historicLevel) + (BAR_COL_VAR/2);
 
   if (volumeEffect > (BAR_COL_RANGE - BAR_COL_VAR/2)) {
     volumeEffect = (BAR_COL_RANGE - BAR_COL_VAR/2);
@@ -55,19 +57,15 @@ void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLe
     volumeEffect = (BAR_COL_VAR / 2);
   }
 
-  // Color pixels based on rainbow gradient
-  for (i = 0; i < N_PIXELS; i++) {
-    if (i >= barLevel) {
-      lights->setPixel(i, bgColor);
-    }
-    else {
-      uint8_t pixelHue = volumeEffect + map(i, 0, N_PIXELS - 1, 0, BAR_COL_VAR) + BAR_COL_LOW;
-#ifdef BAR_COL_INVERT
-      pixelHue = BAR_COL_HIGH - pixelHue + BAR_COL_LOW;
-#endif
+  if (barLevel >= 0) {
+    uint8_t rainbowStart = volumeEffect + BAR_COL_LOW;
+    uint8_t rainbowDelta = map(barLevel, 0, N_PIXELS - 1, 0, BAR_COL_VAR) / barLevel;
+  #ifdef BAR_COL_INVERT
+    rainbowStart = BAR_COL_HIGH - rainbowStart + BAR_COL_LOW;
+    rainbowDelta = -rainbowDelta;
+  #endif
 
-      lights->setPixel(i, CHSV(pixelHue, 255, 255));
-    }
+    lights->pixels()(0, barLevel).fill_rainbow(rainbowStart, rainbowDelta);
   }
 
   // Draw peak dot
@@ -81,11 +79,11 @@ void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLe
     uint8_t peakI = (uint8_t)peak;
 
     for (short offset = -PEAK_RADIUS; offset <= PEAK_RADIUS; offset++) {
-      i = peakI + offset;
-      if (i <= barLevel || i >= N_PIXELS) continue;
+      idx = peakI + offset;
+      if (idx <= barLevel || idx >= N_PIXELS) continue;
 
       fract8 intensity = 255 / (abs(offset) + 1);
-      lights->setPixel(i, bgColor.lerp8(color, intensity));
+      lights->setPixel(idx, lights->pixel(idx).lerp8(color, intensity));
     }
   }
 

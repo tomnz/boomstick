@@ -10,6 +10,8 @@ class Lights {
 public:
   Lights();
   void setPixel(int idx, CRGB color);
+  CRGB pixel(int idx);
+  CRGBSet pixels();
   void begin();
   void clear();
   void show();
