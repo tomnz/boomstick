@@ -1,33 +1,32 @@
 #ifndef CONFIG
 #define CONFIG
 
+//#define ENABLE_SERIAL
+
 //////////////////////////
 // LED HARDWARE SETTINGS
 
 // LED strand data pin
-#define LED_PIN     6
+#define LED_PIN     5
 
 // Number of pixels in strand
-#define N_PIXELS    28
+#define N_PIXELS    25
 
 // When enabled, uses N_PIXELS * 2 pixels on the data line, mirrored in the
 // center
-#define MIRROR_DUPE
+// #define MIRROR_DUPE
 
 // When enabled, reverses the ordering of the LED output
-#define FLIP
-
-// "End" of the string - one past the end so the peak dot can move off scale
-#define TOP         (N_PIXELS + 2)
+// #define FLIP
 
 // When defined, uses an analog signal to vary the overall brightness
-#define BRIGHTNESS_PIN 4
+#define BRIGHTNESS_PIN 1
 
 // Which effect to use on startup - if no button is present, then this
 // is the only effect which is used
 //   0 = Bars
 //   1 = Pulse
-#define INITIAL_EFFECT 1
+#define INITIAL_EFFECT 0
 
 // When defined, enables a button on a digital input to change effects
 #define EFFECT_BUTTON_PIN 8
@@ -42,13 +41,13 @@
 #define FFT_SLOT2   1
 
 // Amount of smoothing for historic volume value
-#define HISTORIC_SMOOTH_FACTOR_UP 300.0
+#define HISTORIC_SMOOTH_FACTOR_UP 500.0
 // Faster historic volume drop, so we stay closer to the low end of current
 // general noise
 #define HISTORIC_SMOOTH_FACTOR_DOWN 150.0
 
 // Amount of smoothing for current volume value
-#define SMOOTH_FACTOR 3.0
+#define SMOOTH_FACTOR 4.0
 
 // Historic FFT frames to keep to determine high/low range
 #define HISTORIC_FRAMES 40
@@ -58,26 +57,33 @@
 /////////////////////////
 // BAR EFFECT SETTINGS
 
-// Color for the minimum intensity bar
-#define MIN_COL     70
-// Color for the maximum intensity bar
-#define MAX_COL     255
+// Color for the low intensity bar
+#define BAR_COL_LOW     0
+// Color for the high intensity bar - must be greater than min
+#define BAR_COL_HIGH     160
+// When defined, inverts high/low bar color spectrum
+#define BAR_COL_INVERT
 // Derived color range between min/max
-#define COL_RANGE   (MAX_COL - MIN_COL)
+#define BAR_COL_RANGE   (BAR_COL_HIGH - BAR_COL_LOW)
 // Color difference between lower and upper parts of bar
-#define COL_VAR     50
+#define BAR_COL_VAR     60
 
-#define BAR_SCALE   1.4
+// "End" of the string - one past the end so the peak dot can move off scale
+#define BAR_TOP         (N_PIXELS + 2)
+
+#define BAR_SCALE   1.6
 #define MIN_BAR_SIZE 70
 
 // Rate at which peak dot falls
-#define PEAK_FALL_RATE 0.15
+#define PEAK_FALL_RATE 0.2
+
+#define PEAK_RADIUS 1
 
 // Background color settings
-#define BACKGROUND_COLOR 80
+#define BACKGROUND_COLOR 160
 #define BACKGROUND_CUTOFF (N_PIXELS / 3)
-#define BACKGROUND_MAX 0.2
-#define BACKGROUND_INCREASE 0.001
+#define BACKGROUND_MAX 0.18
+#define BACKGROUND_INCREASE 0.0005
 #define BACKGROUND_DECREASE 0.01
 
 #define HISTORIC_SCALE 1.2
@@ -95,11 +101,11 @@
 #define BEAT_LOW_FRAMES 20
 
 // Minimum brightness at lowest volume
-#define PULSE_MIN_BRIGHTNESS 0.4
+#define PULSE_MIN_BRIGHTNESS 0.1
 
 // Boost amount of brightness - helps prevent low volumes being clamped by
 // the minimum brightness
-#define PULSE_BRIGHTNESS_BOOST 0.3
+#define PULSE_BRIGHTNESS_BOOST 0.0
 
 // If uncommented, pulse will pick a random color each time instead of
 // advancing the color wheel
@@ -107,5 +113,8 @@
 
 // Advances the color wheel by this amount on each beat
 #define PULSE_COLOR_INCREMENT 55
+
+#define PULSE_FADE_FACTOR 20.0
+#define PULSE_BRIGHTNESS_BEAT 2.5
 
 #endif

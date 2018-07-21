@@ -61,9 +61,9 @@ void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLe
       lights->setPixel(i, bgColor);
     }
     else {
-      uint8_t pixelHue = volumeEffect + map(i, 0, N_PIXELS - 1, 0, BAR_COL_VAR) + BAR_COL_MIN;
+      uint8_t pixelHue = volumeEffect + map(i, 0, N_PIXELS - 1, 0, BAR_COL_VAR) + BAR_COL_LOW;
 #ifdef BAR_COL_INVERT
-      pixelHue = BAR_COL_MAX - pixelHue + BAR_COL_MIN;
+      pixelHue = BAR_COL_HIGH - pixelHue + BAR_COL_LOW;
 #endif
 
       lights->setPixel(i, CHSV(pixelHue, 255, 255));
@@ -72,9 +72,9 @@ void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLe
 
   // Draw peak dot
   if (peak > 2) {
-    uint8_t pixelHue = volumeEffect + map(peak, 0, N_PIXELS - 1, 0, BAR_COL_VAR) + BAR_COL_MIN;
+    uint8_t pixelHue = volumeEffect + map(peak, 0, N_PIXELS - 1, 0, BAR_COL_VAR) + BAR_COL_LOW;
 #ifdef BAR_COL_INVERT
-    pixelHue = BAR_COL_MAX - pixelHue + BAR_COL_MIN;
+    pixelHue = BAR_COL_HIGH - pixelHue + BAR_COL_LOW;
 #endif
     CRGB color = CHSV(pixelHue, 255, 255);
 
@@ -86,11 +86,6 @@ void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLe
       fract8 intensity = 255 / (abs(offset) + 1);
       lights->setPixel(peakI + offset, bgColor.lerp8(color, intensity));
     }
-
-    // for (i = max((int)(peak - PEAK_RADIUS), barLevel); i < min((int)(peak + PEAK_RADIUS), N_PIXELS); i++) {
-    //   fract8 intensity = fract8(255.0 * (1.0 - min(abs((float)i - peak) / PEAK_RADIUS, 0.0)));
-    //   lights->setPixel(i, bgColor.lerp8(color, intensity));
-    // }
   }
 
   // Drop the peak by its fall rate
