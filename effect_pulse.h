@@ -1,10 +1,10 @@
 #ifndef EFFECTPULSE_H
 #define EFFECTPULSE_H
 
+#include <FastLED.h>
 #include "config.h"
 #include "effect.h"
 #include "lights.h"
-#include "color.h"
 
 class EffectPulse : public Effect {
 public:
@@ -14,7 +14,7 @@ public:
 protected:
   void chooseNewColor();
 
-  Color currentColor;
+  CRGB currentColor;
   uint8_t currentColorPos;
   bool beatOn;
   uint16_t lowFrames;

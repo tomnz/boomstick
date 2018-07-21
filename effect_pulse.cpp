@@ -17,7 +17,7 @@ void EffectPulse::chooseNewColor() {
   currentColorPos = (uint8_t)(((uint16_t)currentColorPos + PULSE_COLOR_INCREMENT) % 255);
 #endif
 
-  currentColor = Wheel(currentColorPos);
+  currentColor = CHSV(currentColorPos, 255, 255);
 }
 
 void EffectPulse::loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel) {
@@ -58,17 +58,12 @@ void EffectPulse::loop(Lights *lights, double transformedLevel, double smoothedL
   }
 
   // Clamp brightness
-  Color color = Color();
-  float currBrightness;
+  int r, g, b;
   for (i = 0; i < N_PIXELS; i++) {
-    currBrightness = min(1.0, max(PULSE_MIN_BRIGHTNESS, min(0.3, transformedLevel / 4.0 + PULSE_BRIGHTNESS_BOOST)) + brightness[i]);
+    int pixelBrightness = (int)(255.0 * min(1.0, max(PULSE_MIN_BRIGHTNESS, min(0.3, transformedLevel / 4.0 + PULSE_BRIGHTNESS_BOOST)) + brightness[i]));
+    CRGB pixelColor = CRGB(currentColor);
+    pixelColor.nscale8_video(pixelBrightness);
 
-    color.r = (int)((float)currentColor.r * currBrightness);
-    color.g = (int)((float)currentColor.g * currBrightness);
-    color.b = (int)((float)currentColor.b * currBrightness);
-
-    lights->setPixel(i, color);
+    lights->setPixel(i, pixelColor);
   }
-
-  lights->show();
 }

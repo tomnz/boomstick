@@ -3,36 +3,38 @@
 Lights::Lights() {
 	// For mirrored strings, we need to double the number of pixels
 	#ifdef MIRROR_DUPE
-	strip = Adafruit_NeoPixel(N_PIXELS * 2, LED_PIN, NEO_GRB + NEO_KHZ800);
+	size = N_PIXELS * 2;
 	#else
-	strip = Adafruit_NeoPixel(N_PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
+	size = N_PIXELS;
 	#endif
+	
+	strip = new CRGB[size];
+
+	// TODO: Support max refresh rate and wattage config?
+	FastLED.addLeds<NEOPIXEL, LED_PIN>(strip, size)
+		.setCorrection(TypicalLEDStrip);
 }
 
-void Lights::setPixel(int idx, Color color) {
+void Lights::setPixel(int idx, CRGB color) {
 #ifdef FLIP
-    idx = N_PIXELS - idx - 1;
+	idx = N_PIXELS - idx - 1;
 #endif
 
-  strip.setPixelColor(idx, color.r, color.g, color.b);
+	strip[idx] = color;
 
 #ifdef MIRROR_DUPE
-  strip.setPixelColor(N_PIXELS * 2 - idx - 1, color.r, color.g, color.b);
+	strip[N_PIXELS * 2 - idx - 1] = color;
 #endif
-}
-
-void Lights::begin() {
-	strip.begin();
 }
 
 void Lights::clear() {
-	strip.clear();
+	FastLED.clearData();
 }
 
 void Lights::show() {
-	strip.show();
+	FastLED.show();
 }
 
 void Lights::setBrightness(uint8_t brightness) {
-	strip.setBrightness(brightness);
+	FastLED.setBrightness(brightness);
 }
