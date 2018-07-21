@@ -13,10 +13,10 @@
  */
 
 #include "config.h"
+#include "FastLED.h"
 #include "boomstick.h"
 #include <avr/pgmspace.h>
 #include <ffft.h>
-#include "color.h"
 #include "lights.h"
 #include "effect.h"
 #include "effect_bars.h"
@@ -155,8 +155,6 @@ void setup() {
       colDiv[i] += pgm_read_byte(&data[j]);
   }
 
-  lights.begin();
-
   // Init ADC free-run mode; f = ( 16MHz/prescaler ) / 13 cycles/conversion
   ADMUX  = currentPin; // Channel sel, right-adj, use AREF pin
   ADCSRA = _BV(ADEN)  | // ADC enable
@@ -285,6 +283,7 @@ void loop() {
 
   // Call out to given effect
   effects[currentEffect]->loop(&lights, transformedLevel, smoothedLevel, historicLevel);
+  lights.show();
 
   // if (smoothedLevel < historicLevel * 0.4) {
   //   smoothedLevel = 0;
