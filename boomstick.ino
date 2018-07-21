@@ -125,7 +125,6 @@ uint8_t currentEffect = INITIAL_EFFECT;
 bool changedEffect = false;
 #endif
 
-bool lit = false;
 
 void setup() {
   analogReference(EXTERNAL);
@@ -167,13 +166,23 @@ void setup() {
 #ifdef BRIGHTNESS_PIN
   DIDR0 |= 1 << BRIGHTNESS_PIN;
 #endif
-  TIMSK0 = 0;                // Timer0 off
+  // TODO: Anecdotally, does disabling this worsen FFT quality?
+  // With the timer disabled, millis() no longer updates, but supposedly this
+  // increases jitter/noise for the ADC
+  //TIMSK0 = 0;                // Timer0 off
 
   sei(); // Enable interrupts
 }
 
 
 void loop() {
+#ifdef ENABLE_SERIAL  
+  EVERY_N_SECONDS(5) {
+    Serial.print("FPS: ");
+    Serial.println(FastLED.getFPS());
+  }
+#endif
+
   uint8_t  i, x, L, *data, nBins, binNum, c;
   uint16_t minLvl, maxLvl, currLevel;
   int minLevelCurrent, maxLevelCurrent, y, sum;
@@ -191,11 +200,12 @@ void loop() {
   }
 #endif
 
-  while (ADCSRA & _BV(ADIE)); // Wait for audio sampling to finish
-  samplePos = 0;                   // Reset sample counter
+  // Wait for analog sampling to finish
+  while (ADCSRA & _BV(ADIE));
+  samplePos = 0;
 
-  // Set brightness
 #ifdef BRIGHTNESS_PIN
+  // Set brightness
   if (brightnessUpdated) {
     lights.setBrightness(brightness);
     lights.show();
@@ -208,9 +218,6 @@ void loop() {
 
   // Re-enable the ADC interrupt
   ADCSRA |= _BV(ADIE);
-  lit = !lit;
-  digitalWrite(13, lit);
-
 
   fft_input(capture, bfly_buff);   // Samples -> complex #s
   fft_execute(bfly_buff);          // Process complex data
