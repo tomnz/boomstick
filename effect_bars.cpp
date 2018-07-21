@@ -81,10 +81,11 @@ void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLe
     uint8_t peakI = (uint8_t)peak;
 
     for (short offset = -PEAK_RADIUS; offset <= PEAK_RADIUS; offset++) {
-      if (peakI + offset <= barLevel) continue;
+      i = peakI + offset;
+      if (i <= barLevel || i >= N_PIXELS) continue;
 
       fract8 intensity = 255 / (abs(offset) + 1);
-      lights->setPixel(peakI + offset, bgColor.lerp8(color, intensity));
+      lights->setPixel(i, bgColor.lerp8(color, intensity));
     }
   }
 
