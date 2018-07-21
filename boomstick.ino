@@ -13,10 +13,10 @@
  */
 
 #include "config.h"
+#include "FastLED.h"
 #include "boomstick.h"
 #include <avr/pgmspace.h>
 #include <ffft.h>
-#include "color.h"
 #include "lights.h"
 #include "effect.h"
 #include "effect_bars.h"
@@ -39,7 +39,6 @@ uint16_t      spectrum[FFT_N/2]; // Spectrum output buffer
 volatile uint16_t samplePos = 0;     // Buffer position counter
 
 byte
-  dotCount = 0, // Frame counter for delaying dot-falling speed
   colCount = 0; // Frame counter for storing past column data
 int
   col[HISTORIC_FRAMES],   // Column levels for the prior n frames
@@ -155,8 +154,6 @@ void setup() {
     for (colDiv[i] = 0, j = 2; j < nBins; j++)
       colDiv[i] += pgm_read_byte(&data[j]);
   }
-
-  lights.begin();
 
   // Init ADC free-run mode; f = ( 16MHz/prescaler ) / 13 cycles/conversion
   ADMUX  = currentPin; // Channel sel, right-adj, use AREF pin
@@ -286,6 +283,7 @@ void loop() {
 
   // Call out to given effect
   effects[currentEffect]->loop(&lights, transformedLevel, smoothedLevel, historicLevel);
+  lights.show();
 
   // if (smoothedLevel < historicLevel * 0.4) {
   //   smoothedLevel = 0;

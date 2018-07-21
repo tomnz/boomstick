@@ -1,3 +1,5 @@
 *.suo
 .idea
+.vscode
 config.h
+ideas

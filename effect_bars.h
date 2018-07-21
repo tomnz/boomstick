@@ -1,10 +1,11 @@
 #ifndef EFFECTBARS_H
 #define EFFECTBARS_H
 
+#include <Arduino.h>
+#include <FastLED.h>
 #include "config.h"
 #include "effect.h"
 #include "lights.h"
-#include "color.h"
 
 class EffectBars : public Effect {
 public:
@@ -12,7 +13,8 @@ public:
   void loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel);
 
 protected:
-  float peak, backgroundLevel;
+  CRGB bgColorBase;
+  float peak, bgLevel;
 };
 
 #endif
