@@ -47,7 +47,7 @@ void EffectPulse::loop(Lights *lights, double transformedLevel, double smoothedL
     // Randomly boost the LEDs on a beat
     float randVal;
     for (i = 0; i < N_PIXELS; i++) {
-      randVal = ((float)(random(0, 100)) * PULSE_BRIGHTNESS_BEAT) / 100.0;
+      randVal = ((float)(random8(100)) * PULSE_BRIGHTNESS_BEAT) / 100.0;
       brightness[i] = randVal * randVal;
     }
   }
