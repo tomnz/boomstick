@@ -15,6 +15,7 @@ protected:
   uint8_t x[N_PIXELS];
   uint8_t y[N_PIXELS];
   uint32_t realZ;
+  double level;
 };
 
 #endif

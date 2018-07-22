@@ -14,7 +14,13 @@ EffectNoise::EffectNoise() {
 }
 
 void EffectNoise::loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel) {
-  double level = min(transformedLevel, 1.0);
+  transformedLevel -= NOISE_LEVEL_MIN;
+  if (transformedLevel > level) {
+    level = min(transformedLevel, 1.0);
+  } else {
+    level -= NOISE_LEVEL_DECAY;
+  }
+  level = max(0.0, level);
 
   // Larger scale pushes the circle wider into the noise field - variation across
   // the length of the strip is greater as a result. Small scales result in a few
@@ -26,6 +32,8 @@ void EffectNoise::loop(Lights *lights, double transformedLevel, double smoothedL
   int zShift = max(NOISE_SHIFT_MIN, level * NOISE_SHIFT_FACTOR);
   realZ += zShift;
 
+  uint8_t maxBrightness = map((uint8_t)(level * 255.0), 0, 255, NOISE_BRIGHTNESS_MIN, 255);
+  uint8_t saturation = map((uint8_t)(level * 255.0), 0, 255, NOISE_SATURATION_MIN, 255);
 
   for (uint16_t i = 0; i < N_PIXELS; i++) {
     // Calculate the coordinates within the noise field based on
@@ -36,12 +44,17 @@ void EffectNoise::loop(Lights *lights, double transformedLevel, double smoothedL
     uint8_t noise = inoise16(realX, realY, realZ) >> 8;
 
     uint8_t hue = noise * 3;
-    uint8_t bri = noise;
 
-    CRGB color = CHSV(hue, 255, bri);
+    // TODO: This brightness/contrast shift is probably really inefficient and should
+    // be revisited! Works for now...
+    uint8_t bri = map(noise, 0, 255, 0, maxBrightness);
+
+    // Apply contrast around midpoint, based on level (0 level = 0 contrast added)
+    double diff = level * (bri - NOISE_CONTRAST_MIDPOINT) * NOISE_CONTRAST_AMOUNT;
+
+    bri = max(min(bri + diff, 255), 0);
+
+    CRGB color = CHSV(hue, saturation, bri);
     lights->setPixel(i, color);
   }
-
-  // Brightness - require real peaks to boost this (0.4 subtraction)
-  lights->pixels().nscale8_video(NOISE_BRIGHTNESS_MIN + (uint8_t)(min(transformedLevel - 0.4, 1.0) * (255 - NOISE_BRIGHTNESS_MIN)));
 }
