@@ -20,6 +20,7 @@
 #include "lights.h"
 #include "effect.h"
 #include "effect_bars.h"
+#include "effect_noise.h"
 #include "effect_pulse.h"
 
 //#define ENABLE_SERIAL
@@ -111,13 +112,15 @@ const uint8_t PROGMEM
 
 Lights lights = Lights();
 
-#define N_EFFECTS 2
+#define N_EFFECTS 3
 EffectBars effectBars = EffectBars();
 EffectPulse effectPulse = EffectPulse();
+EffectNoise effectNoise = EffectNoise();
 
 Effect* effects[N_EFFECTS] = {
   &effectBars,
-  &effectPulse
+  &effectPulse,
+  &effectNoise
 };
 uint8_t currentEffect = INITIAL_EFFECT;
 
