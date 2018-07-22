@@ -288,7 +288,7 @@ void loop() {
   minLevelCurrent = max(historicLevel * 1.2, minLvlAvg);
   maxLevelCurrent = max(maxLvlAvg * 1.2, minLevelCurrent + max(MIN_BAR_SIZE, historicLevel * 0.7));
 
-  transformedLevel = ((double)((double)BAR_SCALE * smoothedLevel - (double)minLevelCurrent) /
+  transformedLevel = ((double)(BASE_LEVEL_SCALE * smoothedLevel - (double)minLevelCurrent) /
     ((double)maxLevelCurrent - (double)minLevelCurrent));
 
   // Call out to given effect

@@ -8,7 +8,7 @@ EffectBars::EffectBars() {
 void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel) {
   uint8_t idx;
 
-  int barLevel = (int)(transformedLevel * (double)LAST_PIXEL);
+  int barLevel = (int)(transformedLevel * BAR_LEVEL_SCALE * (double)LAST_PIXEL);
 
   if (barLevel < 0) {
     barLevel = -1;

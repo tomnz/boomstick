@@ -15,6 +15,7 @@ EffectNoise::EffectNoise() {
 
 void EffectNoise::loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel) {
   transformedLevel -= NOISE_LEVEL_MIN;
+  transformedLevel *= NOISE_LEVEL_SCALE;
   if (transformedLevel > level) {
     level = min(transformedLevel, 1.0);
   } else {

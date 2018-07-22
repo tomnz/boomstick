@@ -52,7 +52,7 @@
 #define SMOOTH_FACTOR 3.0
 
 // Boost all effects
-#define BAR_SCALE   1.6
+#define BASE_LEVEL_SCALE   1.6
 
 // Historic FFT frames to keep to determine high/low range
 #define HISTORIC_FRAMES 40
@@ -62,6 +62,9 @@
 
 /////////////////////////
 // BAR EFFECT SETTINGS
+
+// Boost bar effect
+#define BAR_LEVEL_SCALE 1.0
 
 // Color for the low intensity bar
 #define BAR_COL_LOW     0
@@ -124,6 +127,8 @@
 ///////////////////////////
 // NOISE EFFECT SETTINGS
 
+#define NOISE_LEVEL_SCALE 1.5
+
 #define NOISE_SCALE_BASE 70
 #define NOISE_SCALE_DELTA 100
 
@@ -139,10 +144,10 @@
 // After applying the brightness shift for the current level, contrast is applied.
 // If the brightness is above the midpoint, it's boosted, otherwise it's reduced.
 #define NOISE_CONTRAST_MIDPOINT 70
-#define NOISE_CONTRAST_AMOUNT 0.5
+#define NOISE_CONTRAST_AMOUNT 0.8
 
 // The incoming level signal must be greater than this minimum to have any effect
-#define NOISE_LEVEL_MIN 0.3;
+#define NOISE_LEVEL_MIN 0.4;
 // Instead of directly using the noise signal, treat it like a peak, decaying it at
 // a fixed rate.
 #define NOISE_LEVEL_DECAY 0.01;
