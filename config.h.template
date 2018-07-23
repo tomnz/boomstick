@@ -11,12 +11,12 @@
 #define LED_COLOR_ORDER GRB
 
 // Number of pixels in strand
-#define N_PIXELS    25
+#define N_PIXELS    40
 #define LAST_PIXEL  (N_PIXELS - 1)
 
 // When enabled, uses N_PIXELS * 2 pixels on the data line, mirrored in the
 // center
-//#define MIRROR_DUPE
+#define MIRROR_DUPE
 
 // When enabled, reverses the ordering of the LED output
 //#define FLIP
@@ -28,10 +28,11 @@
 // is the only effect which is used
 //   0 = Bars
 //   1 = Pulse
+//   2 = Noise
 #define INITIAL_EFFECT 2
 
 // When defined, enables a button on a digital input to change effects
-#define EFFECT_BUTTON_PIN 9
+#define EFFECT_BUTTON_PIN 7
 
 ////////////////////
 // AUDIO SETTINGS
@@ -151,5 +152,8 @@
 // Instead of directly using the noise signal, treat it like a peak, decaying it at
 // a fixed rate.
 #define NOISE_LEVEL_DECAY 0.01;
+
+// If defined, makes the noise align on each end
+//#define NOISE_CIRCULAR
 
 #endif

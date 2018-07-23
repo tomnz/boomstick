@@ -4,6 +4,7 @@
 // https://gist.github.com/StefanPetrick/5e853bea959e738bc6c2c2026683e3a4
 
 EffectNoise::EffectNoise() {
+#ifdef NOISE_CIRCULAR
   // Precalculate lookup tables - circular in the noise field so that each end
   // of the string matches up together
   for (uint16_t i = 0; i < N_PIXELS; i++) {
@@ -11,6 +12,14 @@ EffectNoise::EffectNoise() {
     x[i] = cos8(angle);
     y[i] = sin8(angle);
   }
+#else
+  // Precalculate lookup tables - evenly space across x=[0, 255], but vary y
+  for (uint16_t i = 0; i < N_PIXELS; i++) {
+    uint8_t angle = (i * 256) / N_PIXELS;
+    x[i] = angle;
+    y[i] = sin8(angle);
+  }
+#endif
 }
 
 void EffectNoise::loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel) {
