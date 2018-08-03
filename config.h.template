@@ -11,11 +11,7 @@
 #define LED_COLOR_ORDER GRB
 
 // Number of pixels in strand
-#define N_PIXELS    38
-
-// When enabled, uses N_PIXELS * 2 pixels on the data line, mirrored in the
-// center
-#define MIRROR_DUPE
+#define N_PIXELS    76
 
 // When enabled, reverses the ordering of the LED output
 //#define FLIP
@@ -64,6 +60,8 @@
 /////////////////////////
 // BAR EFFECT SETTINGS
 
+#define BAR_MIRROR true
+
 // Boost bar effect
 #define BAR_LEVEL_SCALE 1.0
 
@@ -98,6 +96,8 @@
 ///////////////////////////
 // PULSE EFFECT SETTINGS
 
+#define PULSE_MIRROR false
+
 // High/low values for transformed level that determine when a beat
 // stops and starts
 #define BEAT_LOW 0.5
@@ -128,8 +128,9 @@
 ///////////////////////////
 // NOISE EFFECT SETTINGS
 
-#define NOISE_LEVEL_SCALE 1.5
+#define NOISE_MIRROR true
 
+#define NOISE_LEVEL_SCALE 1.5
 // The incoming level signal must be greater than this minimum to have any effect
 #define NOISE_LEVEL_MIN 0.4
 // Instead of directly using the level, treat it like a peak, decaying it at a fixed rate
@@ -158,6 +159,8 @@
 
 /////////////////////////////
 // SINELON EFFECT SETTINGS
+
+#define SINELON_MIRROR false
 
 #define SINELON_LEVEL_SCALE 1.2
 // The incoming level signal must be greater than this minimum to have any effect
