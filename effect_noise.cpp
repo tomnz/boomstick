@@ -42,8 +42,9 @@ void EffectNoise::loop(Lights *lights, double transformedLevel, double smoothedL
   int zShift = max(NOISE_SHIFT_MIN, level * NOISE_SHIFT_FACTOR);
   realZ += zShift;
 
-  uint8_t maxBrightness = map((uint8_t)(level * 255.0), 0, 255, NOISE_BRIGHTNESS_MIN, 255);
-  uint8_t saturation = map((uint8_t)(level * 255.0), 0, 255, NOISE_SATURATION_MIN, 255);
+  uint8_t level8 = (uint8_t)(level * 255.0);
+  uint8_t maxBrightness = map(level8, 0, 255, NOISE_BRIGHTNESS_MIN, 255);
+  uint8_t saturation = map(level8, 0, 255, NOISE_SATURATION_MIN, 255);
 
   for (uint16_t i = 0; i < N_PIXELS; i++) {
     // Calculate the coordinates within the noise field based on
