@@ -7,7 +7,7 @@ Lights::Lights() {
 }
 
 void Lights::setPixel(int idx, CRGB color) {
-	if (idx < 0 || idx > LAST_PIXEL) return;
+	if (idx < 0 || idx >= N_PIXELS) return;
 	leds[idx] = color;
 }
 
@@ -23,22 +23,22 @@ void Lights::clear() {
 	leds.fill_solid(CRGB::Black);
 }
 
-void Lights::show() {
-#ifdef MIRROR_DUPE
+void Lights::show(bool mirror) {
+	if (mirror) {
 	#ifdef FLIP
-		strip(LAST_PIXEL, 0) = leds;
-		strip(N_PIXELS, N_PIXELS * 2 - 1) = leds;
+		strip(N_PIXELS/2 - 1, 0) = leds(0, N_PIXELS/2 - 1);
+		strip(N_PIXELS/2, N_PIXELS - 1) = leds(0, N_PIXELS/2 - 1);
 	#else
-		strip(0, LAST_PIXEL) = leds;
-		strip(N_PIXELS * 2 - 1, N_PIXELS) = leds;
+		strip(0, N_PIXELS/2 - 1) = leds(0, N_PIXELS/2 - 1);
+		strip(N_PIXELS - 1, N_PIXELS/2) = leds(0, N_PIXELS/2 - 1);
 	#endif
-#else
+	} else {
 	#ifdef FLIP
-		strip(LAST_PIXEL, 0) = leds;
+		strip(N_PIXELS - 1, 0) = leds;
 	#else
-		strip(0, LAST_PIXEL) = leds;
+		strip(0, N_PIXELS - 1) = leds;
 	#endif
-#endif
+	}
 
 	FastLED.show();
 }

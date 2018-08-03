@@ -14,7 +14,8 @@ public:
     double posMinLevel,
     uint8_t minPeriod,
     uint8_t maxPeriod,
-    uint8_t numOscillators
+    uint8_t numOscillators,
+    uint8_t lastPixel
   );
   void step(double level);
   uint8_t oldPixel;
@@ -26,6 +27,7 @@ protected:
   uint32_t pos;
   uint8_t periods[5];
   uint8_t numOscillators;
+  uint8_t lastPixel;
 };
 
 

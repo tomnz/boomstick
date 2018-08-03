@@ -214,7 +214,6 @@ void loop() {
   // Set brightness
   if (brightnessUpdated) {
     lights.setBrightness(brightness);
-    lights.show();
 
     brightnessUpdated = false;
     // Don't bother doing anything else in this loop
@@ -296,7 +295,7 @@ void loop() {
 
   // Call out to given effect
   effects[currentEffect]->loop(&lights, transformedLevel, smoothedLevel, historicLevel);
-  lights.show();
+  lights.show(effects[currentEffect]->mirror);
 
   // if (smoothedLevel < historicLevel * 0.4) {
   //   smoothedLevel = 0;

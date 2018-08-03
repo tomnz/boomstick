@@ -12,7 +12,6 @@
 
 // Number of pixels in strand
 #define N_PIXELS    38
-#define LAST_PIXEL  (N_PIXELS - 1)
 
 // When enabled, uses N_PIXELS * 2 pixels on the data line, mirrored in the
 // center

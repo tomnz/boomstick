@@ -1,13 +1,20 @@
 #include "effect_sinelon.h"
 
 EffectSinelon::EffectSinelon() {
+#ifdef SINELON_MIRROR
+  mirror = true;
+  numPixels /= 2;
+  lastPixel = numPixels - 1;
+#endif
+
   for (uint8_t i = 0; i < SINELON_DOTS; i++) {
     dots[i].init(
       SINELON_POS_RATE,
       SINELON_POS_MIN_LEVEL,
       SINELON_PERIOD_MIN,
       SINELON_PERIOD_MAX,
-      SINELON_NUM_OSCILLATORS
+      SINELON_NUM_OSCILLATORS,
+      lastPixel
     );
   }
 }
@@ -53,7 +60,8 @@ void SinelonDot::init(
   double posMinLevel,
   uint8_t minPeriod,
   uint8_t maxPeriod,
-  uint8_t numOscillators
+  uint8_t numOscillators,
+  uint8_t lastPixel
 ) {
   this->posMultiplier = posMultiplier;
   this->posMinLevel = posMinLevel;
@@ -61,6 +69,7 @@ void SinelonDot::init(
     periods[i] = random8(minPeriod, maxPeriod);
   }
   this->numOscillators = numOscillators;
+  this->lastPixel = lastPixel;
 }
 
 void SinelonDot::step(double level) {
@@ -73,5 +82,5 @@ void SinelonDot::step(double level) {
   avg /= numOscillators;
 
   oldPixel = pixel;
-  pixel = map(avg, 0, 255, 0, LAST_PIXEL);
+  pixel = map(avg, 0, 255, 0, lastPixel);
 }

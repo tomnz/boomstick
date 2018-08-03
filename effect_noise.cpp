@@ -4,18 +4,24 @@
 // https://gist.github.com/StefanPetrick/5e853bea959e738bc6c2c2026683e3a4
 
 EffectNoise::EffectNoise() {
+#ifdef NOISE_MIRROR
+  mirror = true;
+  numPixels /= 2;
+  lastPixel = numPixels - 1;
+#endif
+
 #ifdef NOISE_CIRCULAR
   // Precalculate lookup tables - circular in the noise field so that each end
   // of the string matches up together
-  for (uint16_t i = 0; i < N_PIXELS; i++) {
-    uint8_t angle = (i * 256) / N_PIXELS;
+  for (uint16_t i = 0; i < numPixels; i++) {
+    uint8_t angle = (i * 256) / numPixels;
     x[i] = cos8(angle);
     y[i] = sin8(angle);
   }
 #else
   // Precalculate lookup tables - evenly space across x=[0, 255], but vary y
-  for (uint16_t i = 0; i < N_PIXELS; i++) {
-    uint8_t angle = (i * 256) / N_PIXELS;
+  for (uint16_t i = 0; i < numPixels; i++) {
+    uint8_t angle = (i * 256) / numPixels;
     x[i] = angle;
     y[i] = sin8(angle);
   }
@@ -46,7 +52,7 @@ void EffectNoise::loop(Lights *lights, double transformedLevel, double smoothedL
   uint8_t maxBrightness = map(level8, 0, 255, NOISE_BRIGHTNESS_MIN, 255);
   uint8_t saturation = map(level8, 0, 255, NOISE_SATURATION_MIN, 255);
 
-  for (uint16_t i = 0; i < N_PIXELS; i++) {
+  for (uint16_t i = 0; i < numPixels; i++) {
     // Calculate the coordinates within the noise field based on
     // the precalculated positions (no x/y shift)
     uint32_t realX = x[i] * scale;

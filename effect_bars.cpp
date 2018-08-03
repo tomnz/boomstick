@@ -1,6 +1,11 @@
 #include "effect_bars.h"
 
 EffectBars::EffectBars() {
+#ifdef BAR_MIRROR
+  mirror = true;
+  numPixels /= 2;
+  lastPixel = numPixels - 1;
+#endif
   bgColorBase = CRGB(0, 0, 0);
   bgColorBase.setHue(BACKGROUND_COLOR);
 }
@@ -8,13 +13,13 @@ EffectBars::EffectBars() {
 void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel) {
   uint8_t idx;
 
-  int barLevel = (int)(transformedLevel * BAR_LEVEL_SCALE * (double)LAST_PIXEL);
+  int barLevel = (int)(transformedLevel * BAR_LEVEL_SCALE * (double)lastPixel);
 
   if (barLevel < 0) {
     barLevel = -1;
   }
-  if (barLevel > LAST_PIXEL) {
-    barLevel = LAST_PIXEL;
+  if (barLevel > lastPixel) {
+    barLevel = lastPixel;
   }
 
   if (barLevel > peak) {
@@ -43,8 +48,8 @@ void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLe
   if (smoothedLevel < historicLevel * 0.4) {
     barLevel = -1;
   }
-  if (barLevel < LAST_PIXEL) {
-    lights->pixels()(barLevel+1, LAST_PIXEL).fill_solid(bgColor);
+  if (barLevel < lastPixel) {
+    lights->pixels()(barLevel+1, lastPixel).fill_solid(bgColor);
   }
 
   // Draw bar
@@ -59,7 +64,7 @@ void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLe
 
   if (barLevel >= 0) {
     uint8_t rainbowStart = volumeEffect + BAR_COL_LOW;
-    uint8_t rainbowDelta = map(barLevel, 0, N_PIXELS - 1, 0, BAR_COL_VAR) / barLevel;
+    uint8_t rainbowDelta = map(barLevel, 0, lastPixel, 0, BAR_COL_VAR) / barLevel;
   #ifdef BAR_COL_INVERT
     rainbowStart = BAR_COL_HIGH - rainbowStart + BAR_COL_LOW;
     rainbowDelta = -rainbowDelta;
@@ -70,7 +75,7 @@ void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLe
 
   // Draw peak dot
   if (peak > 2) {
-    uint8_t pixelHue = volumeEffect + map(peak, 0, N_PIXELS - 1, 0, BAR_COL_VAR) + BAR_COL_LOW;
+    uint8_t pixelHue = volumeEffect + map(peak, 0, lastPixel, 0, BAR_COL_VAR) + BAR_COL_LOW;
 #ifdef BAR_COL_INVERT
     pixelHue = BAR_COL_HIGH - pixelHue + BAR_COL_LOW;
 #endif
@@ -80,7 +85,7 @@ void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLe
 
     for (short offset = -PEAK_RADIUS; offset <= PEAK_RADIUS; offset++) {
       idx = peakI + offset;
-      if (idx <= barLevel || idx >= N_PIXELS) continue;
+      if (idx <= barLevel || idx >= numPixels) continue;
 
       fract8 intensity = 255 / (abs(offset) + 1);
       lights->setPixel(idx, lights->pixel(idx).lerp8(color, intensity));
