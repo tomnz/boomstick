@@ -1,11 +1,6 @@
 #include "effect_bars.h"
 
-EffectBars::EffectBars() {
-#ifdef BAR_MIRROR
-  mirror = true;
-  numPixels /= 2;
-  lastPixel = numPixels - 1;
-#endif
+EffectBars::EffectBars() : Effect(BAR_MIRROR) {
   bgColorBase = CRGB(0, 0, 0);
   bgColorBase.setHue(BACKGROUND_COLOR);
 }

@@ -3,13 +3,7 @@
 // Loosely based on the 3rd example at:
 // https://gist.github.com/StefanPetrick/5e853bea959e738bc6c2c2026683e3a4
 
-EffectNoise::EffectNoise() {
-#ifdef NOISE_MIRROR
-  mirror = true;
-  numPixels /= 2;
-  lastPixel = numPixels - 1;
-#endif
-
+EffectNoise::EffectNoise() : Effect(NOISE_MIRROR) {
 #ifdef NOISE_CIRCULAR
   // Precalculate lookup tables - circular in the noise field so that each end
   // of the string matches up together

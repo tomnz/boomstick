@@ -1,12 +1,6 @@
 #include "effect_sinelon.h"
 
-EffectSinelon::EffectSinelon() {
-#ifdef SINELON_MIRROR
-  mirror = true;
-  numPixels /= 2;
-  lastPixel = numPixels - 1;
-#endif
-
+EffectSinelon::EffectSinelon() : Effect(SINELON_MIRROR) {
   for (uint8_t i = 0; i < SINELON_DOTS; i++) {
     dots[i].init(
       SINELON_POS_RATE,

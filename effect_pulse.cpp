@@ -1,14 +1,6 @@
 #include "effect_pulse.h"
 
-EffectPulse::EffectPulse():
-  beatOn(false), lowFrames(0)
-{
-#ifdef PULSE_MIRROR
-  mirror = true;
-  numPixels /= 2;
-  lastPixel = numPixels - 1;
-#endif
-
+EffectPulse::EffectPulse() : Effect(PULSE_MIRROR), beatOn(false), lowFrames(0) {
   chooseNewColor();
 
   for (int i = 0; i < numPixels; i++) {
