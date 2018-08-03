@@ -30,6 +30,7 @@
 // When defined, enables a button on a digital input to change effects
 #define EFFECT_BUTTON_PIN 7
 
+
 ////////////////////
 // AUDIO SETTINGS
 

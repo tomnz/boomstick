@@ -16,6 +16,7 @@
 #include "FastLED.h"
 #include "boomstick.h"
 #include <avr/pgmspace.h>
+#include <EEPROM.h>
 #include <ffft.h>
 #include "lights.h"
 #include "effect.h"
@@ -135,6 +136,13 @@ bool changedEffect = false;
 void setup() {
   analogReference(EXTERNAL);
 
+  // We support saving the last used effect between power cycles.
+  // This uses the effect ID + 1 so we can discern from untouched memory.
+  uint8_t effectMemory = EEPROM.read(0);
+  if (effectMemory > 0 && effectMemory <= N_EFFECTS) {
+    currentEffect = effectMemory - 1;
+  }
+
 #ifdef ENABLE_SERIAL
   const unsigned int BAUD_RATE = 9600;
   Serial.begin(BAUD_RATE);
@@ -200,6 +208,7 @@ void loop() {
     if (!changedEffect) {
       changedEffect = true;
       currentEffect = (currentEffect + 1) % N_EFFECTS;
+      EEPROM.write(0, currentEffect + 1);
     }
   } else if (changedEffect) {
     changedEffect = false;
