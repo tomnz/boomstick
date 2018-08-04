@@ -20,10 +20,9 @@ public:
 class EffectSinelon : public Effect {
 public:
   EffectSinelon();
-  void loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel);
+  void loop(Lights *lights, float sanitizedLevel, double transformedLevel, double smoothedLevel, double historicLevel);
 
 protected:
-  float level;
   SinelonDot dots[SINELON_DOTS];
   uint32_t pos;
   uint8_t hue;

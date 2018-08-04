@@ -11,7 +11,7 @@
 class EffectFire : public Effect {
 public:
   EffectFire();
-  void loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel);
+  void loop(Lights *lights, float sanitizedLevel, double transformedLevel, double smoothedLevel, double historicLevel);
 
 protected:
   byte heat[N_PIXELS];

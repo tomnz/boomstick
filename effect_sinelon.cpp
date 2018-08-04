@@ -8,23 +8,14 @@ EffectSinelon::EffectSinelon() : Effect(SINELON_MIRROR) {
   }
 }
 
-void EffectSinelon::loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel) {
-  transformedLevel -= SINELON_LEVEL_MIN;
-  transformedLevel *= SINELON_LEVEL_SCALE;
-  if (transformedLevel > level) {
-    level = min(transformedLevel, 1.0);
-  } else {
-    level -= NOISE_LEVEL_DECAY;
-  }
-  level = max(0.0, level);
+void EffectSinelon::loop(Lights *lights, float sanitizedLevel, double transformedLevel, double smoothedLevel, double historicLevel) {
+  pos += uint32_t(max(sanitizedLevel, SINELON_POS_MIN_LEVEL) * SINELON_POS_RATE);
+  hue += uint8_t(max(sanitizedLevel, SINELON_HUE_MIN_LEVEL) * SINELON_HUE_RATE);
 
-  pos += uint32_t(max(level, SINELON_POS_MIN_LEVEL) * SINELON_POS_RATE);
-  hue += uint8_t(max(level, SINELON_HUE_MIN_LEVEL) * SINELON_HUE_RATE);
-
-  lights->pixels().fadeToBlackBy(1 + uint8_t(level * 9));
+  lights->pixels().fadeToBlackBy(1 + uint8_t(sanitizedLevel * 9));
 
   uint8_t pixel1, pixel2;
-  uint8_t level8 = (uint8_t)(level * 255.0);
+  uint8_t level8 = (uint8_t)(sanitizedLevel * 255.0);
   CRGBSet *leds;
   for (uint8_t i = 0; i < SINELON_DOTS; i++) {
     dots[i].step(pos, lastPixel);

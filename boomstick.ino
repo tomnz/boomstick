@@ -53,6 +53,8 @@ int
 
 double smoothedLevel = 0;
 double historicLevel = 0;
+float sanitizedLevel = 0;
+
 
 #ifdef BRIGHTNESS_PIN
 volatile byte currentPin = BRIGHTNESS_PIN;
@@ -61,6 +63,7 @@ volatile uint8_t brightness = 255;
 #else
 volatile byte currentPin = ADC_CHANNEL;
 #endif
+
 
 /*
 These tables were arrived at through testing, modeling and trial and error,
@@ -309,8 +312,16 @@ void loop() {
   transformedLevel = ((double)(BASE_LEVEL_SCALE * smoothedLevel - (double)minLevelCurrent) /
     ((double)maxLevelCurrent - (double)minLevelCurrent));
 
+  float newSanitizedLevel = (transformedLevel - SANITIZED_LEVEL_MIN) * SANITIZED_LEVEL_SCALE;
+  if (newSanitizedLevel > sanitizedLevel) {
+    sanitizedLevel = min(newSanitizedLevel, 1.0);
+  } else {
+    sanitizedLevel -= SANITIZED_LEVEL_DECAY;
+  }
+  sanitizedLevel = max(0.0, sanitizedLevel);
+
   // Call out to given effect
-  effects[currentEffect]->loop(&lights, transformedLevel, smoothedLevel, historicLevel);
+  effects[currentEffect]->loop(&lights, sanitizedLevel, transformedLevel, smoothedLevel, historicLevel);
   lights.show(effects[currentEffect]->mirror);
 
   // if (smoothedLevel < historicLevel * 0.4) {

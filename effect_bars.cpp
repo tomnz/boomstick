@@ -5,7 +5,7 @@ EffectBars::EffectBars() : Effect(BAR_MIRROR) {
   bgColorBase.setHue(BACKGROUND_COLOR);
 }
 
-void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel) {
+void EffectBars::loop(Lights *lights, float sanitizedLevel, double transformedLevel, double smoothedLevel, double historicLevel) {
   uint8_t idx;
 
   int barLevel = (int)(transformedLevel * BAR_LEVEL_SCALE * (double)lastPixel);

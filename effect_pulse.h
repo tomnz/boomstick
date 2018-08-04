@@ -10,7 +10,7 @@
 class EffectPulse : public Effect {
 public:
   EffectPulse();
-  void loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel);
+  void loop(Lights *lights, float sanitizedLevel, double transformedLevel, double smoothedLevel, double historicLevel);
 
 protected:
   void chooseNewColor();

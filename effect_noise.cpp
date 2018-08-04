@@ -22,26 +22,17 @@ EffectNoise::EffectNoise() : Effect(NOISE_MIRROR) {
 #endif
 }
 
-void EffectNoise::loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel) {
-  transformedLevel -= NOISE_LEVEL_MIN;
-  transformedLevel *= NOISE_LEVEL_SCALE;
-  if (transformedLevel > level) {
-    level = min(transformedLevel, 1.0);
-  } else {
-    level -= NOISE_LEVEL_DECAY;
-  }
-  level = max(0.0, level);
-
+void EffectNoise::loop(Lights *lights, float sanitizedLevel, double transformedLevel, double smoothedLevel, double historicLevel) {
   // Larger scale pushes the circle wider into the noise field - variation across
   // the length of the strip is greater as a result. Small scales result in a few
   // colors, with long smooth transitions between.
-  uint32_t scale = NOISE_SCALE_BASE + level * NOISE_SCALE_DELTA;
+  uint32_t scale = NOISE_SCALE_BASE + sanitizedLevel * NOISE_SCALE_DELTA;
 
   // Larger shift deltas result in travelling faster through the noise field, and
   // quicker color changes as a result.
-  realZ += max(NOISE_SHIFT_MIN, level * NOISE_SHIFT_FACTOR);
+  realZ += max(NOISE_SHIFT_MIN, sanitizedLevel * NOISE_SHIFT_FACTOR);
 
-  uint8_t level8 = (uint8_t)(level * 255.0);
+  uint8_t level8 = (uint8_t)(sanitizedLevel * 255.0);
   uint8_t maxBrightness = map(level8, 0, 255, NOISE_BRIGHTNESS_MIN, 255);
   uint8_t saturation = map(level8, 0, 255, NOISE_SATURATION_MIN, 255);
 
@@ -63,7 +54,7 @@ void EffectNoise::loop(Lights *lights, double transformedLevel, double smoothedL
     bri = map(noise, 0, 255, 0, maxBrightness);
 
     // Apply contrast around midpoint, based on level (0 level = 0 contrast added)
-    diff = level * (bri - NOISE_CONTRAST_MIDPOINT) * NOISE_CONTRAST_AMOUNT;
+    diff = sanitizedLevel * (bri - NOISE_CONTRAST_MIDPOINT) * NOISE_CONTRAST_AMOUNT;
     bri = max(min(bri + diff, 255), 0);
 
     lights->setPixel(i, CHSV(hue, saturation, bri));

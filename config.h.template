@@ -55,6 +55,16 @@
 #define NOISE_THRESHOLD 5
 #define LEVEL_CUTOFF 30
 
+// Sanitized level is designed to be a less "jumpy" level source. It will always be
+// in the range [0.0, 1.0]. It operates in a peak/decay fashion - if the current level
+// is higher, it will jump to that level, but then decays at a set rate if the level
+// drops again.
+#define SANITIZED_LEVEL_SCALE 1.2
+// The incoming level signal must be greater than this minimum to have any effect
+#define SANITIZED_LEVEL_MIN 0.4
+// Instead of directly using the level, treat it like a peak, decaying it at a fixed rate
+#define SANITIZED_LEVEL_DECAY 0.1
+
 
 /////////////////////////
 // BAR EFFECT SETTINGS
@@ -131,12 +141,6 @@
 
 #define NOISE_MIRROR true
 
-#define NOISE_LEVEL_SCALE 1.5
-// The incoming level signal must be greater than this minimum to have any effect
-#define NOISE_LEVEL_MIN 0.4
-// Instead of directly using the level, treat it like a peak, decaying it at a fixed rate
-#define NOISE_LEVEL_DECAY 0.01
-
 #define NOISE_SCALE_BASE 70
 #define NOISE_SCALE_DELTA 100
 
@@ -162,12 +166,6 @@
 // SINELON EFFECT SETTINGS
 
 #define SINELON_MIRROR false
-
-#define SINELON_LEVEL_SCALE 1.2
-// The incoming level signal must be greater than this minimum to have any effect
-#define SINELON_LEVEL_MIN 0.4
-// Instead of directly using the level, treat it like a peak, decaying it at a fixed rate
-#define SINELON_LEVEL_DECAY 0.1
 
 // The brightness and saturation are shifted for the current level, between [MIN, 255]
 #define SINELON_BRIGHTNESS_MIN 120

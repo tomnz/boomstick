@@ -18,7 +18,7 @@ void EffectPulse::chooseNewColor() {
   currentColor = CHSV(currentColorPos, 255, 255);
 }
 
-void EffectPulse::loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel) {
+void EffectPulse::loop(Lights *lights, float sanitizedLevel, double transformedLevel, double smoothedLevel, double historicLevel) {
   // Detect beat
   bool newBeat = false;
 

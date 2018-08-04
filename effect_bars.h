@@ -10,7 +10,7 @@
 class EffectBars : public Effect {
 public:
   EffectBars();
-  void loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel);
+  void loop(Lights *lights, float sanitizedLevel, double transformedLevel, double smoothedLevel, double historicLevel);
 
 protected:
   CRGB bgColorBase;

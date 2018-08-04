@@ -42,7 +42,7 @@
 EffectFire::EffectFire() : Effect(FIRE_MIRROR) {
 }
 
-void EffectFire::loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel) {
+void EffectFire::loop(Lights *lights, float sanitizedLevel, double transformedLevel, double smoothedLevel, double historicLevel) {
   // Array of temperature readings at each simulation cell
 
   // Step 1.  Cool down every cell a little

@@ -10,13 +10,12 @@
 class EffectNoise : public Effect {
 public:
   EffectNoise();
-  void loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel);
+  void loop(Lights *lights, float sanitizedLevel, double transformedLevel, double smoothedLevel, double historicLevel);
 
 protected:
   uint8_t x[N_PIXELS];
   uint8_t y[N_PIXELS];
   uint32_t realZ;
-  float level;
 };
 
 #endif
