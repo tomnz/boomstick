@@ -39,33 +39,33 @@ void EffectNoise::loop(Lights *lights, double transformedLevel, double smoothedL
 
   // Larger shift deltas result in travelling faster through the noise field, and
   // quicker color changes as a result.
-  int zShift = max(NOISE_SHIFT_MIN, level * NOISE_SHIFT_FACTOR);
-  realZ += zShift;
+  realZ += max(NOISE_SHIFT_MIN, level * NOISE_SHIFT_FACTOR);
 
   uint8_t level8 = (uint8_t)(level * 255.0);
   uint8_t maxBrightness = map(level8, 0, 255, NOISE_BRIGHTNESS_MIN, 255);
   uint8_t saturation = map(level8, 0, 255, NOISE_SATURATION_MIN, 255);
 
+  uint32_t realX, realY;
+  uint8_t noise, hue, bri;
+  float diff;
   for (uint16_t i = 0; i < numPixels; i++) {
     // Calculate the coordinates within the noise field based on
     // the precalculated positions (no x/y shift)
-    uint32_t realX = x[i] * scale;
-    uint32_t realY = y[i] * scale;
+    realX = x[i] * scale;
+    realY = y[i] * scale;
     
-    uint8_t noise = inoise16(realX, realY, realZ) >> 8;
+    noise = inoise16(realX, realY, realZ) >> 8;
 
-    uint8_t hue = noise * 3;
+    hue = noise * 3;
 
     // TODO: This brightness/contrast shift is probably really inefficient and should
     // be revisited! Works for now...
-    uint8_t bri = map(noise, 0, 255, 0, maxBrightness);
+    bri = map(noise, 0, 255, 0, maxBrightness);
 
     // Apply contrast around midpoint, based on level (0 level = 0 contrast added)
-    double diff = level * (bri - NOISE_CONTRAST_MIDPOINT) * NOISE_CONTRAST_AMOUNT;
-
+    diff = level * (bri - NOISE_CONTRAST_MIDPOINT) * NOISE_CONTRAST_AMOUNT;
     bri = max(min(bri + diff, 255), 0);
 
-    CRGB color = CHSV(hue, saturation, bri);
-    lights->setPixel(i, color);
+    lights->setPixel(i, CHSV(hue, saturation, bri));
   }
 }

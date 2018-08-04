@@ -44,7 +44,11 @@ void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLe
     barLevel = -1;
   }
   if (barLevel < lastPixel) {
+    #ifdef BAR_FLIP
+    lights->pixels()(0, lastPixel - barLevel - 1).fill_solid(bgColor);
+    #else
     lights->pixels()(barLevel+1, lastPixel).fill_solid(bgColor);
+    #endif
   }
 
   // Draw bar
@@ -65,7 +69,11 @@ void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLe
     rainbowDelta = -rainbowDelta;
   #endif
 
+  #ifdef BAR_FLIP
+    lights->pixels()(lastPixel, lastPixel - barLevel).fill_rainbow(rainbowStart, rainbowDelta);
+  #else
     lights->pixels()(0, barLevel).fill_rainbow(rainbowStart, rainbowDelta);
+  #endif
   }
 
   // Draw peak dot
@@ -83,6 +91,9 @@ void EffectBars::loop(Lights *lights, double transformedLevel, double smoothedLe
       if (idx <= barLevel || idx >= numPixels) continue;
 
       fract8 intensity = 255 / (abs(offset) + 1);
+      #ifdef BAR_FLIP
+      idx = lastPixel - idx;
+      #endif
       lights->setPixel(idx, lights->pixel(idx).lerp8(color, intensity));
     }
   }

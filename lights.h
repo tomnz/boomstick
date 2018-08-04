@@ -12,14 +12,12 @@ public:
   void setPixel(int idx, CRGB color);
   CRGB pixel(int idx);
   CRGBSet pixels();
-  void begin();
   void clear();
   void show(bool mirror);
   void setBrightness(uint8_t brightness);
 
 protected:
   CRGBArray<N_PIXELS> leds;
-  CRGBArray<N_PIXELS> strip;
 };
 
 #endif

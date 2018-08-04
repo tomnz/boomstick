@@ -14,7 +14,6 @@
 
 #include "config.h"
 #include "FastLED.h"
-#include "boomstick.h"
 #include <avr/pgmspace.h>
 #include <EEPROM.h>
 #include <ffft.h>
@@ -26,7 +25,9 @@
 #include "effect_pulse.h"
 #include "effect_sinelon.h"
 
-//#define ENABLE_SERIAL
+#ifdef ENABLE_SERIAL
+#include <MemoryUsage.h>
+#endif
 
 // Microphone connects to Analog Pin 0.  Corresponding ADC channel number
 // varies among boards...it's ADC0 on Uno and Mega, ADC7 on Leonardo.
@@ -108,26 +109,26 @@ const uint8_t PROGMEM
     143, 164, 179, 185, 184, 174, 158, 139, 118,  97,
      77,  60,  45,  34,  25,  18,  13,   9,   7,   5,
       3,   2,   2,   1,   1,   1,   1 };
-  // And then this points to the start of the data for each of the columns:
-  const uint8_t * const colData[] PROGMEM = {
-    col0data, col1data, col2data, col3data,
-    col4data, col5data, col6data, col7data };
+// And then this points to the start of the data for each of the columns:
+const uint8_t * const colData[] PROGMEM = {
+  col0data, col1data, col2data, col3data,
+  col4data, col5data, col6data, col7data
+};
 
 Lights lights = Lights();
 
-#define N_EFFECTS 4
+#define N_EFFECTS 5
 EffectBars effectBars = EffectBars();
 EffectPulse effectPulse = EffectPulse();
 EffectNoise effectNoise = EffectNoise();
-// TODO: This is causing a crash for some reason? Unclear why, will fix on a future commit...
-// EffectSinelon effectSinelon = EffectSinelon();
+EffectSinelon effectSinelon = EffectSinelon();
 EffectFire effectFire = EffectFire();
 
 Effect* effects[N_EFFECTS] = {
   &effectBars,
   &effectPulse,
   &effectNoise,
-  //&effectSinelon
+  &effectSinelon,
   &effectFire
 };
 uint8_t currentEffect = INITIAL_EFFECT;
@@ -194,10 +195,12 @@ void setup() {
 
 
 void loop() {
-#ifdef ENABLE_SERIAL  
+#ifdef ENABLE_SERIAL
   EVERY_N_SECONDS(5) {
-    Serial.print("FPS: ");
+    Serial.print(F("FPS: "));
     Serial.println(FastLED.getFPS());
+    FREERAM_PRINT
+    Serial.println();
   }
 #endif
 

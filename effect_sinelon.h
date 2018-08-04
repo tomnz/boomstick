@@ -10,25 +10,10 @@
 class SinelonDot {
 public:
   SinelonDot();
-  void init(
-    double posMultiplier,
-    double posMinLevel,
-    uint8_t minPeriod,
-    uint8_t maxPeriod,
-    uint8_t numOscillators,
-    uint8_t lastPixel
-  );
-  void step(double level);
+  void step(uint32_t pos, uint8_t lastPixel);
   uint8_t oldPixel;
   uint8_t pixel;
-
-protected:
-  double posMultiplier;
-  double posMinLevel;
-  uint32_t pos;
-  uint8_t periods[5];
-  uint8_t numOscillators;
-  uint8_t lastPixel;
+  uint8_t periods[SINELON_NUM_OSCILLATORS];
 };
 
 
@@ -38,9 +23,10 @@ public:
   void loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel);
 
 protected:
+  float level;
   SinelonDot dots[SINELON_DOTS];
+  uint32_t pos;
   uint8_t hue;
-  double level;
 };
 
 #endif

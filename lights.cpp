@@ -2,7 +2,7 @@
 
 Lights::Lights() {
 	// TODO: Support max refresh rate and wattage config?
-	FastLED.addLeds<NEOPIXEL, LED_PIN>(strip, strip.size())
+	FastLED.addLeds<NEOPIXEL, LED_PIN>(leds, leds.size())
 		.setCorrection(TypicalLEDStrip);
 }
 
@@ -25,21 +25,8 @@ void Lights::clear() {
 
 void Lights::show(bool mirror) {
 	if (mirror) {
-	#ifdef FLIP
-		strip(N_PIXELS/2 - 1, 0) = leds(0, N_PIXELS/2 - 1);
-		strip(N_PIXELS/2, N_PIXELS - 1) = leds(0, N_PIXELS/2 - 1);
-	#else
-		strip(0, N_PIXELS/2 - 1) = leds(0, N_PIXELS/2 - 1);
-		strip(N_PIXELS - 1, N_PIXELS/2) = leds(0, N_PIXELS/2 - 1);
-	#endif
-	} else {
-	#ifdef FLIP
-		strip(N_PIXELS - 1, 0) = leds;
-	#else
-		strip(0, N_PIXELS - 1) = leds;
-	#endif
+		leds(N_PIXELS - 1, N_PIXELS/2) = leds(0, N_PIXELS/2 - 1);
 	}
-
 	FastLED.show();
 }
 

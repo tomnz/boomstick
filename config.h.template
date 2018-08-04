@@ -13,9 +13,6 @@
 // Number of pixels in strand
 #define N_PIXELS    76
 
-// When enabled, reverses the ordering of the LED output
-//#define FLIP
-
 // When defined, uses an analog signal to vary the overall brightness
 #define BRIGHTNESS_PIN 0
 
@@ -63,6 +60,8 @@
 // BAR EFFECT SETTINGS
 
 #define BAR_MIRROR true
+// When defined, reverses the direction of the bar
+// #define BAR_FLIP
 
 // Boost bar effect
 #define BAR_LEVEL_SCALE 1.0

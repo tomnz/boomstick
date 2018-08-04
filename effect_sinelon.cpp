@@ -2,14 +2,9 @@
 
 EffectSinelon::EffectSinelon() : Effect(SINELON_MIRROR) {
   for (uint8_t i = 0; i < SINELON_DOTS; i++) {
-    dots[i].init(
-      SINELON_POS_RATE,
-      SINELON_POS_MIN_LEVEL,
-      SINELON_PERIOD_MIN,
-      SINELON_PERIOD_MAX,
-      SINELON_NUM_OSCILLATORS,
-      lastPixel
-    );
+    for (uint8_t j = 0; j < SINELON_NUM_OSCILLATORS; j++) {
+      dots[i].periods[j] = random8(SINELON_PERIOD_MIN, SINELON_PERIOD_MAX);
+    }
   }
 }
 
@@ -23,6 +18,7 @@ void EffectSinelon::loop(Lights *lights, double transformedLevel, double smoothe
   }
   level = max(0.0, level);
 
+  pos += uint32_t(max(level, SINELON_POS_MIN_LEVEL) * SINELON_POS_RATE);
   hue += uint8_t(max(level, SINELON_HUE_MIN_LEVEL) * SINELON_HUE_RATE);
 
   lights->pixels().fadeToBlackBy(1 + uint8_t(level * 9));
@@ -31,7 +27,7 @@ void EffectSinelon::loop(Lights *lights, double transformedLevel, double smoothe
   uint8_t level8 = (uint8_t)(level * 255.0);
   CRGBSet *leds;
   for (uint8_t i = 0; i < SINELON_DOTS; i++) {
-    dots[i].step(level);
+    dots[i].step(pos, lastPixel);
     pixel1 = dots[i].oldPixel;
     pixel2 = dots[i].pixel;
     
@@ -49,31 +45,12 @@ void EffectSinelon::loop(Lights *lights, double transformedLevel, double smoothe
 SinelonDot::SinelonDot() {
 }
 
-void SinelonDot::init(
-  double posMultiplier,
-  double posMinLevel,
-  uint8_t minPeriod,
-  uint8_t maxPeriod,
-  uint8_t numOscillators,
-  uint8_t lastPixel
-) {
-  this->posMultiplier = posMultiplier;
-  this->posMinLevel = posMinLevel;
-  for (uint8_t i = 0; i < numOscillators; i++) {
-    periods[i] = random8(minPeriod, maxPeriod);
-  }
-  this->numOscillators = numOscillators;
-  this->lastPixel = lastPixel;
-}
-
-void SinelonDot::step(double level) {
-  pos += uint32_t(max(level, posMinLevel) * posMultiplier);
-
+void SinelonDot::step(uint32_t pos, uint8_t lastPixel) {
   uint32_t avg = 0;
-  for (uint8_t i = 0; i < numOscillators; i++) {
+  for (uint8_t i = 0; i < SINELON_NUM_OSCILLATORS; i++) {
     avg += sin8(uint8_t(pos / periods[i]));
   }
-  avg /= numOscillators;
+  avg /= SINELON_NUM_OSCILLATORS;
 
   oldPixel = pixel;
   pixel = map(avg, 0, 255, 0, lastPixel);

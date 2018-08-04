@@ -21,7 +21,6 @@ void EffectPulse::chooseNewColor() {
 void EffectPulse::loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel) {
   // Detect beat
   bool newBeat = false;
-  uint8_t i;
 
   if (beatOn) {
     if (lowFrames >= BEAT_LOW_FRAMES) {
@@ -44,21 +43,20 @@ void EffectPulse::loop(Lights *lights, double transformedLevel, double smoothedL
 
     // Randomly boost the LEDs on a beat
     float randVal;
-    for (i = 0; i < numPixels; i++) {
-      randVal = ((float)(random8(100)) * PULSE_BRIGHTNESS_BEAT) / 100.0;
+    for (uint8_t i = 0; i < numPixels; i++) {
+      randVal = ((float)(random8(255)) * PULSE_BRIGHTNESS_BEAT) / 255.0;
       brightness[i] = randVal * randVal;
     }
   }
 
   // Pull the brightnesses towards 1.0
-  for (i = 0; i < numPixels; i++) {
+  for (uint8_t i = 0; i < numPixels; i++) {
     brightness[i] = brightness[i] * PULSE_FADE_FACTOR / (PULSE_FADE_FACTOR + 1.0);
   }
 
   // Clamp brightness
-  int r, g, b;
-  for (i = 0; i < numPixels; i++) {
-    int pixelBrightness = (int)(255.0 * min(1.0, max(PULSE_MIN_BRIGHTNESS, min(0.3, transformedLevel / 4.0 + PULSE_BRIGHTNESS_BOOST)) + brightness[i]));
+  for (uint8_t i = 0; i < numPixels; i++) {
+    uint8_t pixelBrightness = (uint8_t)(255.0 * min(1.0, max(PULSE_MIN_BRIGHTNESS, min(0.3, transformedLevel / 4.0 + PULSE_BRIGHTNESS_BOOST)) + brightness[i]));
     CRGB pixelColor = CRGB(currentColor);
     pixelColor.nscale8_video(pixelBrightness);
 
