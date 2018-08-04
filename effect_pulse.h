@@ -1,6 +1,7 @@
 #ifndef EFFECTPULSE_H
 #define EFFECTPULSE_H
 
+#include <Arduino.h>
 #include <FastLED.h>
 #include "config.h"
 #include "effect.h"

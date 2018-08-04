@@ -1,6 +1,7 @@
 #ifndef EFFECTSINELON_H
 #define EFFECTSINELON_H
 
+#include <Arduino.h>
 #include <FastLED.h>
 #include "config.h"
 #include "effect.h"

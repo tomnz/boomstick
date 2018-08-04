@@ -21,6 +21,7 @@
 #include "lights.h"
 #include "effect.h"
 #include "effect_bars.h"
+#include "effect_fire.h"
 #include "effect_noise.h"
 #include "effect_pulse.h"
 #include "effect_sinelon.h"
@@ -118,13 +119,16 @@ Lights lights = Lights();
 EffectBars effectBars = EffectBars();
 EffectPulse effectPulse = EffectPulse();
 EffectNoise effectNoise = EffectNoise();
-EffectSinelon effectSinelon = EffectSinelon();
+// TODO: This is causing a crash for some reason? Unclear why, will fix on a future commit...
+// EffectSinelon effectSinelon = EffectSinelon();
+EffectFire effectFire = EffectFire();
 
 Effect* effects[N_EFFECTS] = {
   &effectBars,
   &effectPulse,
   &effectNoise,
-  &effectSinelon
+  //&effectSinelon
+  &effectFire
 };
 uint8_t currentEffect = INITIAL_EFFECT;
 

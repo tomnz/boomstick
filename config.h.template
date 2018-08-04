@@ -25,7 +25,8 @@
 //   1 = Pulse
 //   2 = Noise
 //   3 = Sinelon
-#define INITIAL_EFFECT 3
+//   4 = Fire
+#define INITIAL_EFFECT 0
 
 // When defined, enables a button on a digital input to change effects
 #define EFFECT_BUTTON_PIN 7
@@ -192,5 +193,12 @@
 // Min/max period defines how quickly each of the oscillators for a dot will move
 #define SINELON_PERIOD_MIN 15
 #define SINELON_PERIOD_MAX 40
+
+
+//////////////////////////
+// FIRE EFFECT SETTINGS
+
+#define FIRE_MIRROR true
+
 
 #endif

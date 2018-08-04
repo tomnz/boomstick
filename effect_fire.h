@@ -1,5 +1,5 @@
-#ifndef EFFECTNOISE_H
-#define EFFECTNOISE_H
+#ifndef EFFECTFIRE_H
+#define EFFECTFIRE_H
 
 #include <Arduino.h>
 #include <FastLED.h>
@@ -7,16 +7,14 @@
 #include "effect.h"
 #include "lights.h"
 
-class EffectNoise : public Effect {
+
+class EffectFire : public Effect {
 public:
-  EffectNoise();
+  EffectFire();
   void loop(Lights *lights, double transformedLevel, double smoothedLevel, double historicLevel);
 
 protected:
-  uint8_t x[N_PIXELS];
-  uint8_t y[N_PIXELS];
-  uint32_t realZ;
-  double level;
+  byte heat[N_PIXELS];
 };
 
 #endif
