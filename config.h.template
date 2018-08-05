@@ -59,11 +59,11 @@
 // in the range [0.0, 1.0]. It operates in a peak/decay fashion - if the current level
 // is higher, it will jump to that level, but then decays at a set rate if the level
 // drops again.
-#define SANITIZED_LEVEL_SCALE 1.2
+#define SANITIZED_LEVEL_SCALE 1.4
 // The incoming level signal must be greater than this minimum to have any effect
 #define SANITIZED_LEVEL_MIN 0.4
 // Instead of directly using the level, treat it like a peak, decaying it at a fixed rate
-#define SANITIZED_LEVEL_DECAY 0.1
+#define SANITIZED_LEVEL_DECAY 0.05
 
 
 /////////////////////////
@@ -71,7 +71,7 @@
 
 #define BAR_MIRROR true
 // When defined, reverses the direction of the bar
-// #define BAR_FLIP
+#define BAR_FLIP
 
 // Boost bar effect
 #define BAR_LEVEL_SCALE 1.0
@@ -150,12 +150,12 @@
 #define NOISE_SHIFT_FACTOR 1500
 
 // The brightness and saturation are shifted for the current level, between [MIN, 255]
-#define NOISE_BRIGHTNESS_MIN 180
-#define NOISE_SATURATION_MIN 140
+#define NOISE_BRIGHTNESS_MIN 200
+#define NOISE_SATURATION_MIN 150
 
 // After applying the brightness shift for the current level, contrast is applied.
 // If the brightness is above the midpoint, it's boosted, otherwise it's reduced.
-#define NOISE_CONTRAST_MIDPOINT 70
+#define NOISE_CONTRAST_MIDPOINT 50
 #define NOISE_CONTRAST_AMOUNT 0.8
 
 // If defined, makes the noise align on each end
@@ -197,5 +197,23 @@
 
 #define FIRE_MIRROR true
 
+// For these parameters, the min is used when the level is zero, and max when the level is at maximum.
+
+// How much does the air cool as it rises?
+// Less cooling = taller flames. More cooling = shorter flames. Tweak for the number of LEDs.
+#define FIRE_COOLING_MIN  45
+#define FIRE_COOLING_MAX  45
+
+// What chance (out of 255) is there that a new spark will be lit?
+// Higher chance = more roaring fire. Lower chance = more flickery fire.
+#define FIRE_SPARKING_MIN 30
+#define FIRE_SPARKING_MAX 160
+
+// Heat for each new spark. Also used to maintain a continuous "flame" at the bottom
+#define FIRE_SPARK_HEAT_MIN 100
+#define FIRE_SPARK_HEAT_MAX 200
+
+// If the animation is too quick, we can artificially slow it with some delay
+#define FIRE_FRAME_DELAY_MS 4
 
 #endif

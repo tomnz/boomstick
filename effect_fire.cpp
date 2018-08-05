@@ -20,35 +20,16 @@
 //
 // I recommend running this simulation at anywhere from 30-100 frames per second,
 // meaning an interframe delay of about 10-35 milliseconds.
-//
-// Looks best on a high-density LED setup (60+ pixels/meter).
-//
-//
-// There are two main parameters you can play with to control the look and
-// feel of your fire: COOLING (used in step 1 above), and SPARKING (used
-// in step 3 above).
-//
-// COOLING: How much does the air cool as it rises?
-// Less cooling = taller flames.  More cooling = shorter flames.
-// Default 50, suggested range 20-100 
-#define FIRE_COOLING_MIN  55
-#define FIRE_COOLING_MAX  55
-
-// SPARKING: What chance (out of 255) is there that a new spark will be lit?
-// Higher chance = more roaring fire.  Lower chance = more flickery fire.
-// Default 120, suggested range 50-200.
-#define FIRE_SPARKING_MIN 80
-#define FIRE_SPARKING_MAX 120
-
-#define FIRE_SPARK_HEAT_MIN 120
-#define FIRE_SPARK_HEAT_MAX 160
 
 
 EffectFire::EffectFire() : Effect(FIRE_MIRROR) {
 }
 
 void EffectFire::loop(Lights *lights, float sanitizedLevel, double transformedLevel, double smoothedLevel, double historicLevel) {
-  Serial.println(sanitizedLevel);
+  #ifdef FIRE_FRAME_DELAY_MS
+  delay(FIRE_FRAME_DELAY_MS);
+  #endif
+
   uint8_t cooling = map(sanitizedLevel*255, 0, 255, FIRE_COOLING_MIN, FIRE_COOLING_MAX);
   // Step 1.  Cool down every cell a little
   for (int i = 0; i < numPixels; i++) {
@@ -67,10 +48,11 @@ void EffectFire::loop(Lights *lights, float sanitizedLevel, double transformedLe
     int y = random8(7);
     heat[y] = qadd8(heat[y], random8(sparkHeat - 30, sparkHeat));
   }
+  heat[0] = sparkHeat - 20;
+  heat[1] = sparkHeat - 10;
 
   // Step 4.  Map from heat cells to LED colors
   for (int j = 0; j < numPixels; j++) {
     lights->setPixel(j, HeatColor(heat[j]));
   }
-  lights->pixels().fadeToBlackBy(50);
 }
