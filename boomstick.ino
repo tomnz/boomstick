@@ -19,11 +19,22 @@
 #include <ffft.h>
 #include "lights.h"
 #include "effect.h"
+
+#ifdef EFFECT_BARS
 #include "effect_bars.h"
+#endif
+#ifdef EFFECT_FIRE
 #include "effect_fire.h"
+#endif
+#ifdef EFFECT_NOISE
 #include "effect_noise.h"
+#endif
+#ifdef EFFECT_PULSE
 #include "effect_pulse.h"
+#endif
+#ifdef EFFECT_SINELON
 #include "effect_sinelon.h"
+#endif
 
 #ifdef ENABLE_SERIAL
 #include <MemoryUsage.h>
@@ -120,19 +131,38 @@ const uint8_t * const colData[] PROGMEM = {
 
 Lights lights = Lights();
 
-#define N_EFFECTS 5
+#ifdef EFFECT_BARS
 EffectBars effectBars = EffectBars();
+#endif
+#ifdef EFFECT_PULSE
 EffectPulse effectPulse = EffectPulse();
+#endif
+#ifdef EFFECT_NOISE
 EffectNoise effectNoise = EffectNoise();
+#endif
+#ifdef EFFECT_SINELON
 EffectSinelon effectSinelon = EffectSinelon();
+#endif
+#ifdef EFFECT_FIRE
 EffectFire effectFire = EffectFire();
+#endif
 
 Effect* effects[N_EFFECTS] = {
+#ifdef EFFECT_BARS
   &effectBars,
+#endif
+#ifdef EFFECT_PULSE
   &effectPulse,
+#endif
+#ifdef EFFECT_NOISE
   &effectNoise,
+#endif
+#ifdef EFFECT_SINELON
   &effectSinelon,
+#endif
+#ifdef EFFECT_FIRE
   &effectFire
+#endif
 };
 uint8_t currentEffect = INITIAL_EFFECT;
 

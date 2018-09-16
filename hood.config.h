@@ -16,13 +16,21 @@
 // When defined, uses an analog signal to vary the overall brightness
 #define BRIGHTNESS_PIN 0
 
-// Which effect to use on startup - if no button is present, then this
-// is the only effect which is used
-//   0 = Bars
-//   1 = Pulse
-//   2 = Noise
-//   3 = Sinelon
-//   4 = Fire
+// Enable/disable effects
+// Note that depending on the available RAM etc, you might not be able to enable ALL
+// effects. If you see the lights stall or restart, try disabling one or more effects.
+#define EFFECT_BARS
+// #define EFFECT_PULSE
+#define EFFECT_NOISE
+#define EFFECT_SINELON
+#define EFFECT_FIRE
+
+// Must be updated to reflect the number of enabled effects!
+#define N_EFFECTS 4
+
+// Which effect to use on initial startup - if no button is present, then this is
+// the only effect which is used. For subsequent startups, EEPROM is used to save
+// the previously selected effect.
 #define INITIAL_EFFECT 0
 
 // When defined, enables a button on a digital input to change effects
